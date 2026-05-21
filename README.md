@@ -69,6 +69,13 @@
 
 ## 🔗 КЛЮЧЕВЫЕ ССЫЛКИ
 
-* **Репозиторий кода:** [finlab-strategies-local](https://github.com/ArchakovBullet/finlab-strategies-local)
-* **Репозиторий данных FutOI:** [futoi-data](https://github.com/ArchakovBullet/futoi-data)
+### Репозитории:
+
+* **Код стратегий:** [finlab-strategies-local](https://github.com/ArchakovBullet/finlab-strategies-local)
+* **Данные FutOI:** [futoi-data](https://github.com/ArchakovBullet/futoi-data)
+* **Данные Super Candles (H4):** [supercandles-h4-data](https://github.com/ArchakovBullet/supercandles-h4-data)
+* **Дневник разработки:** [finlab-diary](https://github.com/ArchakovBullet/finlab-diary)
+
+### Инфраструктура:
+
 * **Сервер:** oot@159.194.219.117`n* **VS Code Server:** [http://159.194.219.117:8080](http://159.194.219.117:8080)
