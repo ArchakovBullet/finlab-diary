@@ -8,23 +8,23 @@
 
 | Дата | Файл | Ключевые события |
 |------|------|--------------------------------------------------|
-| 07.05 | WORK_LOG_2026-05-07.md | Проверка FutOI, начало акций, конвертер M10→D1 |
-| 08.05 | WORK_LOG_2026-05-08.md | HI2 сборщик, OsEngine данные, HMM прорыв |
-| 10.05 | WORK_LOG_2026-05-10.md | Валидация HMM, стоп-лоссы, FutOI стратегия |
-| 12.05 | WORK_LOG_2026-05-12.md | Дашборд v0.2 и VK бот |
-| 13.05 | WORK_LOG_2026-05-13_plan.md | План доработки FutOI — новые метрики и сигналы |
-| 14.05 | WORK_LOG_2026-05-14.md | Итоги дня + Треугольник |
-| 15.05 | WORK_LOG_2026-05-15.md | TradeStats, Volume Profile, Вердикт v3.2 |
-| 16.05 | WORK_LOG_2026-05-16.md | Уведомления VK-бота о смене тренда |
-| 16.05 | WORK_LOG_2026-05-16_audit.md | Аудит трейдера — 3 критических улучшения |
-| 16.05 | WORK_LOG_2026-05-16_continue.md | Continue + DeepSeek API |
-| 17.05 | WORK_LOG_2026-05-17_plan.md | Единый приоритетный план — 17 задач |
-| 17.05 | WORK_LOG_2026-05-17_triangle.md | Tampermonkey и Continue |
-| 19.05 | WORK_LOG_2026-05-19.md | Итоги дня + план на 20.05 |
-| 19.05 | WORK_LOG_2026-05-19_plan.md | 6 новых задач, приоритеты |
-| 20.05 | WORK_LOG_2026-05-20.md | Фандинг и корреляции при анализе активов |
-| 20.05 | WORK_LOG_2026-05-20_plan.md | 3 новые задачи + приоритеты |
-| 21.05 | WORK_LOG_2026-05-21.md | FMFS-скоринг и Zweig Filter |
+| 07.05 | [WORK_LOG_2026-05-07.md](WORK_LOG_2026-05-07.md) | Проверка FutOI, начало акций, конвертер M10→D1 |
+| 08.05 | [WORK_LOG_2026-05-08.md](WORK_LOG_2026-05-08.md) | HI2 сборщик, OsEngine данные, HMM прорыв |
+| 10.05 | [WORK_LOG_2026-05-10.md](WORK_LOG_2026-05-10.md) | Валидация HMM, стоп-лоссы, FutOI стратегия |
+| 12.05 | [WORK_LOG_2026-05-12.md](WORK_LOG_2026-05-12.md) | Дашборд v0.2 и VK бот |
+| 13.05 | [WORK_LOG_2026-05-13_plan.md](WORK_LOG_2026-05-13_plan.md) | План доработки FutOI — новые метрики и сигналы |
+| 14.05 | [WORK_LOG_2026-05-14.md](WORK_LOG_2026-05-14.md) | Итоги дня + Треугольник |
+| 15.05 | [WORK_LOG_2026-05-15.md](WORK_LOG_2026-05-15.md) | TradeStats, Volume Profile, Вердикт v3.2 |
+| 16.05 | [WORK_LOG_2026-05-16.md](WORK_LOG_2026-05-16.md) | Уведомления VK-бота о смене тренда |
+| 16.05 | [WORK_LOG_2026-05-16_audit.md](WORK_LOG_2026-05-16_audit.md) | Аудит трейдера — 3 критических улучшения |
+| 16.05 | [WORK_LOG_2026-05-16_continue.md](WORK_LOG_2026-05-16_continue.md) | Continue + DeepSeek API |
+| 17.05 | [WORK_LOG_2026-05-17_plan.md](WORK_LOG_2026-05-17_plan.md) | Единый приоритетный план — 17 задач |
+| 17.05 | [WORK_LOG_2026-05-17_triangle.md](WORK_LOG_2026-05-17_triangle.md) | Tampermonkey и Continue |
+| 19.05 | [WORK_LOG_2026-05-19.md](WORK_LOG_2026-05-19.md) | Итоги дня + план на 20.05 |
+| 19.05 | [WORK_LOG_2026-05-19_plan.md](WORK_LOG_2026-05-19_plan.md) | 6 новых задач, приоритеты |
+| 20.05 | [WORK_LOG_2026-05-20.md](WORK_LOG_2026-05-20.md) | Фандинг и корреляции при анализе активов |
+| 20.05 | [WORK_LOG_2026-05-20_plan.md](WORK_LOG_2026-05-20_plan.md) | 3 новые задачи + приоритеты |
+| 21.05 | [WORK_LOG_2026-05-21.md](WORK_LOG_2026-05-21.md) | FMFS-скоринг и Zweig Filter |
 
 ---
 
@@ -51,7 +51,4 @@
 
 ## 🔗 КЛЮЧЕВЫЕ ССЫЛКИ
 
-  * **Репозиторий кода:** `https://github.com/ArchakovBullet/finlab-strategies-local`
-  * **Репозиторий данных FutOI:** `https://github.com/ArchakovBullet/futoi-data`
-  * **Сервер:** `root@159.194.219.117`
-  * **VS Code Server:** `http://159.194.219.117:8080`
+  * **Репозиторий кода:** https://github.com/ArchakovBullet/finlab-strategies-local`n  * **Репозиторий данных FutOI:** https://github.com/ArchakovBullet/futoi-data`n  * **Сервер:** oot@159.194.219.117`n  * **VS Code Server:** http://159.194.219.117:8080`n
