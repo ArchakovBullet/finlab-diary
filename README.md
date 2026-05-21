@@ -38,3 +38,4 @@
 - **Репозиторий данных FutOI:** `https://github.com/ArchakovBullet/futoi-data`
 - **Сервер:** `root@159.194.219.117`
 - **VS Code Server:** `http://159.194.219.117:8080`
+
