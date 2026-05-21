@@ -73,6 +73,7 @@
 
 * **Код стратегий:** [finlab-strategies-local](https://github.com/ArchakovBullet/finlab-strategies-local)
 * **Данные FutOI:** [futoi-data](https://github.com/ArchakovBullet/futoi-data)
+* **Данные HI2:** [hi2-data](https://github.com/ArchakovBullet/hi2-data)
 * **Данные Super Candles (H4):** [supercandles-h4-data](https://github.com/ArchakovBullet/supercandles-h4-data)
 * **Дневник разработки:** [finlab-diary](https://github.com/ArchakovBullet/finlab-diary)
 
