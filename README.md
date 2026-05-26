@@ -86,3 +86,29 @@ oot@159.194.219.117`n* **VS Code Server:** [http://159.194.219.117:8080](http://
 
 
 
+
+
+### 📁 Структура проекта
+
+FinLabProject/
+- FinLabPy/ — код стратегий (синхронизирован локально + сервер)
+  - My_Indicators/ — short_signal.py, futoi_indicator.py, futoi_ml_filter.py
+  - Strategies/ — 5 стратегий (SBERF, GAZPF, GLDRUBF, IMOEXF, CNYRUBF)
+  - DataCollectors/ — сборщики данных
+- finlab_dashboard/ — дашборд (ТОЛЬКО на сервере)
+  - app_v2.py — актуальная версия с шорт-анализом
+- finlab-diary/ — дневник (подмодуль Git)
+
+Репозитории GitHub:
+- finlab-strategies-local (код)
+- futoi-data, hi2-data, funding-data, candles-data, supercandles-data, supercandles-h4-data, tradestats-data (данные)
+- finlab-infrastructure (конфиги)
+- finlab-diary (дневник)
+
+Сервер (159.194.219.117):
+- /root/finlab/FinLabPy/ — код
+- /root/finlab/finlab_dashboard/ — дашборд
+- /root/finlab/data/ — данные
+- /root/finlab/logs/ — логи
+- :8501 — Streamlit, :8080 — VS Code Server
+
