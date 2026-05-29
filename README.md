@@ -96,6 +96,7 @@ FinLabProject/
   - Strategies/ — 5 стратегий (SBERF, GAZPF, GLDRUBF, IMOEXF, CNYRUBF)
   - DataCollectors/ — сборщики данных
 - finlab_dashboard/ — дашборд (ТОЛЬКО на сервере)
+  - в отдельном репозитории: finlab-dashboard
   - app_v2.py — актуальная версия с шорт-анализом
 - finlab-diary/ — дневник (подмодуль Git)
 
@@ -115,6 +116,7 @@ FinLabProject/
 
 
 ---
+
 
 
 
