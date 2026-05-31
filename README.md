@@ -121,3 +121,68 @@ FinLabProject/
 
 
 
+
+---
+
+## 🤖 Контекст для AI-ассистента (DeepSeek / Continue)
+
+### Источники данных
+Проект использует **Algopack** (API MOEX) как основной источник рыночных данных:
+- **Super Candles (D1)** — дневные свечи с агрегированной статистикой сделок (pr_open/high/low/close, vol_b, vol_s, count_b, count_s, hi2_score)
+- **Super Candles H4** — 4-часовые свечи (агрегируются из минутных)
+- **HI2** — индикатор институциональной активности (Herfindahl-Hirschman Index)
+- **TradeStats** — статистика сделок (объёмы покупок/продаж, количество сделок)
+- **FutOI** — открытый интерес по фьючерсам (физики/юрики)
+- **Funding** — ставки фандинга
+
+Пути к данным (сервер): /root/finlab/data/{tradestats,hi2,futoi,funding,supercandles,supercandles_h4}/
+
+### Ключевые пути (сервер)
+| Компонент | Путь |
+|-----------|------|
+| Код FinLabPy | /root/finlab/FinLabPy/ |
+| Дашборд | /root/finlab/finlab_dashboard/app_v2.py |
+| Данные | /root/finlab/data/ |
+| Логи | /root/finlab/logs/ |
+| Виртуальное окружение | /root/finlab/venv/ |
+| VK-бот | /root/finlab/vk_bot.py |
+
+### Ключевые пути (локально)
+| Компонент | Путь |
+|-----------|------|
+| Корень проекта | E:\Python\FinLabProject\ |
+| Код FinLabPy | E:\Python\FinLabProject\FinLabPy\ |
+| Дашборд (локальная копия) | E:\Python\FinLabProject\finlab_dashboard\ |
+| Дневник | E:\Python\FinLabProject\finlab-diary\ |
+
+### Алгопак-модули (My_Indicators/)
+- garch_indicator.py — GARCH(1,1): годовая волатильность, тренд, прогноз на 5 дней
+- market_aggression.py — коэффициент агрессивности рынка (0–100) на основе TradeStats
+- robot_classifier.py — классификация алгоритмов (HFT/VWAP/Iceberg/Институциональные) на основе HI2
+- cross_market.py — кросс-рыночный анализ: корреляция, Z-score спреда, сигналы (подтверждает/противоречит)
+- short_signal.py — сигналы для шорта
+- futoi_indicator.py — индикатор на основе позиций физиков/юриков
+
+### Дашборд (вкладки)
+FutOI -> Trade Stats -> Объёмы -> Super Candles -> Super Candles H4 -> Funding -> Вердикт -> Корреляции -> Алгопак (GARCH, агрессивность, классификация, кросс-рынок)
+
+### Соглашения
+- Правка дашборда: только на сервере -> git push -> локально git pull
+- Правка модулей: локально -> git push -> сервер git pull
+- Логирование: loguru во всех модулях
+- Cron: ежедневная агрегация в 17:35-17:45 МСК
+- Данные: parquet-файлы, partitioned по датам
+
+### Частые команды для диагностики (сервер)
+- Активация окружения: cd /root/finlab && source venv/bin/activate
+- Логи Super Candles: ls -la /root/finlab/logs/ | grep supercandle
+- Cron: crontab -l
+- Статус дашборда: ps aux | grep streamlit
+
+### Быстрые ссылки
+- Дашборд: http://159.194.219.117:8501
+- VS Code Server: http://159.194.219.117:8080
+- Дневник (актуальный): https://github.com/ArchakovBullet/finlab-diary/blob/main/README.md
+
+---
+*Последнее обновление: 31.05.2026*
