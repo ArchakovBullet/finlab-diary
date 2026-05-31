@@ -186,3 +186,38 @@ FutOI -> Trade Stats -> Объёмы -> Super Candles -> Super Candles H4 -> Fun
 
 ---
 *Последнее обновление: 31.05.2026*
+
+## 31.05.2026 — FUTOI 1H, Super Candles fixes, дашборд
+
+### Реализовано
+- ✅ **FUTOI 1H сборщик** — агрегация 5-минутных FutOI в 1-часовые свечи
+  - Модуль: FinLabPy/DataCollectors/futoi_1h_aggregator.py
+  - Данные: /root/finlab/data/futoi_1h/futoi_1h.parquet
+  - 5 тикеров (CNYRUBF, GAZPF, GLDRUBF, IMOEXF, SBERF)
+  - Период: 28.04.2026 — 31.05.2026, 2120 строк
+  - Cron: каждый час в :05
+  - Репозиторий: utoi-1h-data
+- ✅ **Вкладка FUTOI_1H в дашборде** — часовая аналитика позиций физиков/юриков
+  - График ratio (физ/юр % покупателей)
+  - График дельты за 1 час
+  - Таблица последних записей
+  - Выбор тикера
+- ✅ **Super Candles fix** — исправлен missing return в load_supercandles_data()
+- ✅ **Super Candles H4 fix** — показывает последний файл вместо первого (files[-1])
+- ✅ **Дневник** — добавлен блок "Контекст для AI-ассистента" (Algopack, пути, модули, соглашения)
+
+### Исправлено
+- load_supercandles_data() не возвращала данные → TypeError на вкладке Super Candles
+- Super Candles H4 показывал старый файл (11 мая) вместо актуального
+
+### Git / инфраструктура
+- Исправлен remote в корне проекта (указывал на finlab-dashboard вместо finlab-strategies-local)
+- Подмодуль finlab-diary обновлён
+- Настроен git credentials на сервере
+
+### Следующие шаги
+- Бэктест шорт-сигнала на истории
+- Доработка рисков (ГО)
+- Улучшение макета дашборда (вердикт наверх, "что делать")
+
+---
