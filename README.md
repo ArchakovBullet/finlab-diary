@@ -620,3 +620,4 @@ FutOI -> Trade Stats -> Объёмы -> Super Candles -> Super Candles H4 -> Funding -
 - Затем ?? **Скринер акций** и **Парная торговля**
 
 ---
+
