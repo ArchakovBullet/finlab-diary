@@ -799,3 +799,22 @@ FutOI -> Trade Stats -> Объёмы -> Super Candles -> Super Candles H4 -> Funding -
 - Протестировать накопление данных
 
 ---
+
+## 17.06.2026 (3) — Сборщик FutOI 4H создан
+
+### Реализовано
+- ? **Сборщик FutOI 4H:** utoi_4h_aggregator.py
+  - Агрегирует 5-минутные FutOI в 4-часовые блоки
+  - Блоки: утро (7:00-11:00), день (11:00-15:00), вечер (15:00-19:00)
+  - 8 тикеров: CNYRUBF, GAZPF, GLDRUBF, IMOEXF, SBERF, USDRUBF, EURRUBF, BR
+  - Метрики: fiz_buy_ratio, yur_buy_ratio, fiz_long/short, yur_long/short
+  - Дельта внутри дня (между блоками)
+  - Cron: каждый час в :10
+  - Данные: /root/finlab/data/futoi_4h/futoi_4h.parquet
+
+### Следующие шаги
+- Создать модуль unified_scanner.py — объединённый вердикт (1D+4H+1H)
+- Создать вкладку «?? Сканер фьючерсов»
+- Удалить FutOI и FUTOI_1H
+
+---
