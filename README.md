@@ -1299,3 +1299,26 @@ FutOI -> Trade Stats -> Объёмы -> Super Candles -> Super Candles H4 -> Funding -
 - ?? Скринер облигаций
 
 ---
+
+## 30.06.2026 (3) — MegaAlerts заработали!
+
+### Реализовано
+- ? **MegaAlerts с реальными данными:**
+  - Правильный endpoint: pim.moex.com/iss/datashop/algopack/{market}/alerts/{ticker}.json
+  - Токен из MOEX_TOKEN (переменная окружения)
+  - CNYRUBF: 34 алерта за 5 дней
+  - SBER: 93 алерта за 5 дней (очень активный!)
+  - Работает для акций (eq) и фьючерсов (fo)
+
+### Технические детали
+- Базовый URL: https://apim.moex.com
+- Путь: /iss/datashop/algopack/{market}/alerts/{ticker}.json
+- Авторизация: Bearer {MOEX_TOKEN}
+- Параметры: rom, 	ill
+
+### TODO
+- Ограничить вывод последними 10 алертами
+- Показывать тип алерта (крупная сделка, аномальный объём)
+- Добавить влияние на вердикт (много алертов = повышенное внимание)
+
+---
