@@ -1,5 +1,11 @@
-# НАПОМИНАЛКА ДЛЯ AI
+# НАПОМИНАЛКА: ПУШ ДНЕВНИКА + SUBMODULE (ОДНИМ БЛОКОМ)
 
-- README.md — ТОЛЬКО стратегическая информация (идеология, доступы, правила, структура)
-- Текущие задачи, статусы, планы — ТОЛЬКО в WORK_LOG_*.md
-- НЕ обновлять README статусами выполненных/текущих задач
+cd E:\Python\FinLabProjectinlab-diary
+git add -A
+git commit -m "описание"
+git push
+
+cd E:\Python\FinLabProject
+git add finlab-diary
+git commit -m "Обновление submodule"
+git push
