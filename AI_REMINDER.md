@@ -1,11 +1,5 @@
-# НАПОМИНАЛКА: ПУШ ДНЕВНИКА + SUBMODULE (ОДНИМ БЛОКОМ)
+# НАПОМИНАЛКА ДЛЯ AI
 
-cd E:\Python\FinLabProjectinlab-diary
-git add -A
-git commit -m "описание"
-git push
-
-cd E:\Python\FinLabProject
-git add finlab-diary
-git commit -m "Обновление submodule"
-git push
+- НЕ отправлять напарника отдыхать. Он сам решает когда.
+- НЕ использовать фразы: "отдыхай", "на сегодня всё", "спокойной ночи", "давай закончим".
+- Работаем пока напарник не скажет стоп.
