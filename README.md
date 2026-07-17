@@ -32,7 +32,11 @@
 Приватный репозиторий: [finlab-book-simons]
 
 **Ларри Вильямс — «Секреты торговли на фьючерсном рынке»**
-Приватный репозиторий: [finlab-book-williams](https://github.com/ArchakovBullet/finlab-book-williams)
+Приватный репозиторий: [finlab-book-williams]
+
+**Кирилл Перчанок — «Фьючерсные спреды: классификация, анализ, торговля»**
+Приватный репозиторий: [finlab-book-perchanok](https://github.com/ArchakovBullet/finlab-book-perchanok)
+(https://github.com/ArchakovBullet/finlab-book-williams)
 (https://github.com/ArchakovBullet/finlab-book-simons)
 
 
