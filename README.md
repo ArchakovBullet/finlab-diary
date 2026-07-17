@@ -29,7 +29,11 @@
 ## 📚 НАСТОЛЬНАЯ КНИГА ПРОЕКТА
 
 **Грегори Цукерман — «Человек, который разгадал рынок»**
-Приватный репозиторий: [finlab-book-simons](https://github.com/ArchakovBullet/finlab-book-simons)
+Приватный репозиторий: [finlab-book-simons]
+
+**Ларри Вильямс — «Секреты торговли на фьючерсном рынке»**
+Приватный репозиторий: [finlab-book-williams](https://github.com/ArchakovBullet/finlab-book-williams)
+(https://github.com/ArchakovBullet/finlab-book-simons)
 
 
 ## 🚨 ПРАВИЛА РАБОТЫ (ИЗ RULES.MD)
