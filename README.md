@@ -47,7 +47,9 @@
 - Данные: polars основная библиотека, pandas только для backtrader
 - Логирование: FinLabPy.Utils.setup_logger
 - Новый сборщик: код + cron + check_collectors_health.py + vk_bot.py + запись в WORK_LOG
-- Код: все изменения локально через PowerShell, сервер только pull и диагностика
+- Код (FinLabPy): редактируется локально -> git push -> сервер git pull
+- Дашборд и сборщики: редактируются на сервере -> git push -> локально git pull
+- После любых изменений на сервере немедленно синхронизировать локально (git pull)
 
 ---
 
