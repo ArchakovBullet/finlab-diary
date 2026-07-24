@@ -1,10 +1,10 @@
-# 📋 ПАСПОРТ FinLabPy — ДЛЯ AI-АССИСТЕНТА
+﻿# ПАСПОРТ FinLabPy — ДЛЯ AI-АССИСТЕНТА
 
-## 📅 Актуально на: 07.07.2026
+## Актуально на: 24.07.2026
 
 ---
 
-## 🔗 ДОСТУПЫ
+## ДОСТУПЫ
 
 - Локально: E:\Python\FinLabProject (Windows, Python 3.12, venv)
 - Сервер: root@159.194.219.117 (Ubuntu 24.04, Python 3.12)
@@ -13,92 +13,56 @@
 
 ---
 
-## 🎯 ИДЕОЛОГИЯ: ДЖИМ САЙМОНС / RENAISSANCE TECHNOLOGIES
+## ИДЕОЛОГИЯ: ДЖИМ САЙМОНС / RENAISSANCE TECHNOLOGIES
 
-Проект следует подходу Джима Саймонса:
-- **Данные превыше всего.** Сбор и очистка рыночных данных — фундамент.
-- **Математика, не фундамент.** Ищем статистически значимые сигналы в шуме.
-- **Скрытые закономерности.** Не очевидные паттерны, а тонкие аномалии.
-- **Сначала исследование, потом роботы.** Накапливаем данные, тестируем гипотезы.
-- **Портфельный подход.** Множество некоррелированных сигналов одновременно.
-
-
+- Данные превыше всего
+- Математика, не фундамент
+- Скрытые закономерности
+- Сначала исследование, потом роботы
+- Портфельный подход
 
 ---
 
-## 📚 НАСТОЛЬНАЯ КНИГА ПРОЕКТА
+## СТАТУС ЗАДАЧ (актуально)
 
-**Грегори Цукерман — «Человек, который разгадал рынок»**
-Приватный репозиторий: [finlab-book-simons]
+### ВЫПОЛНЕНО
+- [x] Кризисный режим: сканер фьючерсов (GARCH>35%, RVI>70)
+- [x] Кризисный режим: скринер акций (GARCH>35%, TRIN<0.5/>1.5)
+- [x] RVI в дашборде
+- [x] Volume Spike в unified_scanner и stock_scanner_tf
+- [x] HI2-штраф унифицирован
+- [x] _find_active_contract с сортировкой по экспирации
+- [x] Блокировка тикеров без FutOI
+- [x] Сборщик TRIN (cron)
 
-**Ларри Вильямс — «Секреты торговли на фьючерсном рынке»**
-Приватный репозиторий: [finlab-book-williams]
+### ОСТАЛОСЬ (по приоритетам)
+- [ ] Бэктест вердиктов — внедрить улучшения
+- [ ] VK-бот для акций
+- [ ] Проверить сборщики после правок _full_code
+- [ ] ML-модели
+- [ ] Светофор рисков
 
-**Кирилл Перчанок — «Фьючерсные спреды: классификация, анализ, торговля»**
-Приватный репозиторий: [finlab-book-perchanok](https://github.com/ArchakovBullet/finlab-book-perchanok)
-(https://github.com/ArchakovBullet/finlab-book-williams)
-(https://github.com/ArchakovBullet/finlab-book-simons)
+---
 
-
-## 🚨 ПРАВИЛА РАБОТЫ (ИЗ RULES.MD)
+## ПРАВИЛА РАБОТЫ
 
 - Обращение: Напарник
 - Язык: весь код, комментарии, документация — строго на РУССКОМ
-- Данные: polars основная библиотека, pandas только для backtrader
-- Логирование: FinLabPy.Utils.setup_logger
-- Новый сборщик: код + cron + check_collectors_health.py + vk_bot.py + запись в WORK_LOG
-- Код (FinLabPy): редактируется локально -> git push -> сервер git pull
-- Дашборд и сборщики: редактируются на сервере -> git push -> локально git pull
-- После любых изменений на сервере немедленно синхронизировать локально (git pull)
-
----
-
-## 🚨 GIT WORKFLOW
-
 - Код (FinLabPy): локально -> git push -> сервер git pull
-- Дашборд (finlab-dashboard): сервер -> git push, потом локально git pull
-- Дневник (finlab-diary): локально -> git push из E:\Python\FinLabProjectinlab-diary
+- Дашборд: сервер -> git push -> локально git pull
 - ЗАПРЕЩЕНО: редактировать код на сервере
-- ПОРЯДОК: сначала пушим сервер, потом локально!
 
 ---
 
-## 📦 API MOEXPy (Algopack)
-
-Фьючерсы:
-  candles = api.get_candles('RFUD', 'GLDRUBF', dt_from, dt_till, tf)
-  futoi = api.get_futoi('GLDRUBF', dt_from, dt_till)
-
-Акции:
-  candles = api.get_candles('TQBR', 'SBER', dt_from, dt_till, 'D')
-  trades = api.get_trades('TQBR', 'SBER', tradeno=None)
-  hi2 = api.get_hi2('stocks', 'SBER', date)
-
-Вечные фьючерсы: GLDRUBF, IMOEXF, SBERF, GAZPF, CNYRUBF, USDRUBF, EURRUBF
-Срочные фьючерсы: автоопределение полного кода через MOEX API (по SECTYPE)
-
----
-
-## ⚠️ КРИТИЧЕСКИЕ ОСОБЕННОСТИ
-
-- FutOI: pos_short с минусом -> abs(), clgroup='FIZ'/'YUR', API отдаёт 3-4 дня
-- Свечи акций: MOEX отдаёт только M10, нет D1
-- HI2: engine='stocks' (не 'stock'!)
-- Срочные фьючерсы: коды автоопределяются через _find_active_contract()
-- HI2-штраф в unified_verdict: >500 -> -15, >150 -> -10, >70 -> -5
-
----
-
-## 📁 СТРУКТУРА ПРОЕКТА (сервер)
+## СТРУКТУРА ПРОЕКТА (сервер)
 
 /root/finlab/
   FinLabPy/
     DataCollectors/    # Сборщики (cron)
-    My_Indicators/     # Индикаторы (unified_verdict.py, garch_indicator.py)
+    My_Indicators/     # Индикаторы
     Strategies/        # Стратегии
     Utils/             # Утилиты
   finlab_dashboard/
     app_v2.py          # Дашборд
-  data/                # Parquet-хранилище (futoi, candles, hi2, tradestats)
-  RULES.md             # Правила для AI-ассистента
+  data/                # Parquet-хранилище
   vk_bot.py            # VK-бот
