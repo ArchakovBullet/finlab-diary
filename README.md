@@ -1,32 +1,15 @@
-﻿## 06.08.2026 (среда)
+﻿## 06.08.2026 (среда) — дополнение
 
-### ✅ Сделано
+### ✅ Доделано
 
-**TradeStats для срочных фьючерсов:**
-- Найдена и исправлена проблема: API требует полные коды (BRU6, SiU6...)
-- Исправлен get_tradestats в MOEXPy — поддержка нового формата data.data
-- Исправлен tradestats_collector.py — добавлен _resolve_full_code, убрано жёсткое len()
-- Результат: +149 896 записей, все срочные фьючерсы собираются
+**GARCH → RVI:**
+- Единый источник RVI (sector_indices/RVI_D1.parquet) на всех вкладках
+- Порог CRISIS: 40 пунктов (вместо 30%)
+- Пункты вместо процентов (38.0 п.)
+- Исправлены: сводка, сканер фьючерсов, скринер акций, zweig_filter, market_regime
 
-**Чистка:**
-- Удалены неактуальные сборщики: tinkoff, backup, m10_to_d1, check_health
-
-**futoi_1h_aggregator.py:**
-- Защита от деления на ноль (fillna)
-- Заполнение NaN после outer merge
-- diff() с группировкой по ticker
-
-**futoi_4h_aggregator.py:**
-- Убрана перезапись hour
-- Добавлен drop_duplicates, проверка колонок
-
-**futoi_collector.py:**
-- Проверка MOEX_TOKEN, обработчики исключений, валидация дат
-
-**Переписка с Algopack:**
-- Отправлен ответ — данные найдены, проблема в MOEXPy исправлена
-
-### 📝 На будущее
-
-- GARCH/CRISIS: заменить на RVI
-- HMM тесты на свежих данных
+**Сборщики:**
+- hi2_collector: TICKERS вынесен за класс
+- hi2_daily: dir() → globals()
+- futures_h4: dt.date/dt.time вместо cast
+- futoi_daily: shift().over(ticker)
