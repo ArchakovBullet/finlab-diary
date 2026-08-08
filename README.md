@@ -1,15 +1,22 @@
-﻿## 06.08.2026 (среда) — дополнение
+﻿## 08.08.2026 (воскресенье)
 
-### ✅ Доделано
+### ✅ Сделано
 
-**GARCH → RVI:**
-- Единый источник RVI (sector_indices/RVI_D1.parquet) на всех вкладках
-- Порог CRISIS: 40 пунктов (вместо 30%)
-- Пункты вместо процентов (38.0 п.)
-- Исправлены: сводка, сканер фьючерсов, скринер акций, zweig_filter, market_regime
+**MOEX_TOKEN для крона:**
+- Создан /root/finlab/.env с токеном
+- Все 4 сборщика (futoi, hi2, supercandles, lqdt) читают токен из .env
+- Установлен python-dotenv
+- Раньше крон падал с ошибкой "MOEX_TOKEN не установлен"
 
-**Сборщики:**
-- hi2_collector: TICKERS вынесен за класс
-- hi2_daily: dir() → globals()
-- futures_h4: dt.date/dt.time вместо cast
-- futoi_daily: shift().over(ticker)
+**VK-бот:**
+- Исправлены все vk.messages.send → vk.method (была ошибка 'VkApi' object has no attribute 'messages')
+- Уведомления о смене трендов теперь отправляются на личный ID
+- Добавлена проверка MOEX_TOKEN в check_data_freshness
+- Имитация смены тренда — уведомление пришло успешно
+- Авто-проверка свежести каждые 6 часов работает
+- Команда stale работает
+
+### 🟡 Известно
+
+- MOEXTL приостановлен
+- TradeStats для срочных — работает после правок
