@@ -1,4 +1,4 @@
-# 📚 НАСТОЛЬНАЯ КНИГА ПРОЕКТА
+﻿# 📚 НАСТОЛЬНАЯ КНИГА ПРОЕКТА
 
 ## Грегори Цукерман — «Человек, который разгадал рынок»
 ### (The Man Who Solved the Market: How Jim Simons Launched the Quant Revolution)
