@@ -1,6 +1,5 @@
-
 # Добавить строку:# Очистка логов FinLabPy каждый день в 00:00 UTC (03:00 МСК) — храним 7 дней
-0 5 * * * systemctl restart finlab-robot.service finlab-futures-robot.service finlab-stocks-robot.service
+# 0 5 * * * systemctl restart finlab-robot.service finlab-futures-robot.service finlab-stocks-robot.service
 0 0 * * * cd /root/finlab && /root/finlab/venv/bin/python /root/finlab/FinLabPy/Utils/cleanup_logs.py --days 7 >> /root/finlab/logs/cleanup_cron.log 2>&1
 
 # Сбор FutOI каждый час в рабочие дни (07:00-20:00 UTC = 10:00-23:00 МСК)
@@ -57,7 +56,7 @@
 30 21 * * * /root/finlab/scripts/cleanup_old_data.sh
 
 # Проверка здоровья сборщиков каждые 30 минут
-0 * * * * /root/finlab/scripts/validate_crontab.sh
+# 0 * * * * /root/finlab/scripts/validate_crontab.sh
 5 * * * * PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/futoi_1h_aggregator.py >> /root/finlab/logs/futoi_1h_cron.log 2>&1
 # Renaissance Scanner — поиск закономерностей (каждое воскресенье в 22:00 МСК = 19:00 UTC)
 # Бэктест вердиктов — каждое воскресенье в 23:00 МСК (20:00 UTC)
@@ -70,7 +69,7 @@
 45 17 * * * PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/futures_h4_aggregator.py >> /root/finlab/logs/futures_h4_aggregate_cron.log 2>&1
 */30 * * * * cd /root/finlab && /root/finlab/venv/bin/python /root/finlab/scripts/check_contract_changes.py >> /root/finlab/logs/contract_check_cron.log 2>&1
 0 * * * * cd /root/finlab && /root/finlab/venv/bin/python /root/finlab/scripts/check_memory.py >> /root/finlab/logs/memory_check_cron.log 2>&1
-0 19 * * 0 cd /root/finlab && PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/scripts/weekly_pairs_optimization.py >> /root/finlab/logs/weekly_pairs_optimization.log 2>&1
+# 0 19 * * 0 cd /root/finlab && PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/scripts/weekly_pairs_optimization.py >> /root/finlab/logs/weekly_pairs_optimization.log 2>&1
 # */30 7-20 * * * cd /root/finlab && PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/scripts/check_pair_signals.py >> /root/finlab/logs/pair_signals_cron.log 2>&1
 30 18 * * * PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/mega_alert_collector.py >> /root/finlab/logs/mega_alert_cron.log 2>&1
 */30 * * * * cd /root/finlab && /root/finlab/venv/bin/python /root/finlab/scripts/check_collector_logs.py >> /root/finlab/logs/collector_logs_check.log 2>&1
@@ -85,4 +84,4 @@
 10 0 * * 0 cd /root/finlab/data/tradestats && git gc --quiet --prune=now 2>&1
 15 0 * * 0 cd /root/finlab/data/supercandles_h4 && git gc --quiet --prune=now 2>&1
 20 0 * * 0 cd /root/finlab/data/funding && git gc --quiet --prune=now 2>&1
-0 19 * * * PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/futures_h4_aggregator.py >> /root/finlab/logs/futures_h4_aggregate_cron.log 2>&1
+# 0 19 * * * PYTHONPATH=/root/finlab/FinLabPy /root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/futures_h4_aggregator.py >> /root/finlab/logs/futures_h4_aggregate_cron.log 2>&1

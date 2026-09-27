@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-26 22:58 MSK | COMMIT: 59fd37d | LINES: 2753 -->
+<!-- VERSION: 2026-09-27 20:51 MSK | COMMIT: ac2eae8 | LINES: 2820 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2751,3 +2751,70 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - **Без лимита** — суммарный PnL +366.7% (228 сделок, avg +1.61%).
 - **Бумажная торговля** — риск не материальный, но дисциплина важна.
 - **Саймонс:** много маленьких ставок, edge > комиссия, walk-forward.
+
+## 27.09.2026 (воскресенье, вечер) — инцидент: роботы перезапускались через cron, устранено
+
+### 🔥 ИНЦИДЕНТ
+
+Роботы (pairs, futures, stocks) были «остановлены» 26.09 через `systemctl stop`, но **27.09 в 05:00 UTC (08:00 МСК) поднялись снова**. Открыто 25 бумажных позиций (pairs 3, stocks 10, futures 12).
+
+### 🔍 ПРИЧИНА (подтверждена логами)
+
+1. **cron-строка:** `0 5 * * * systemctl restart finlab-robot.service finlab-futures-robot.service finlab-stocks-robot.service` — каждый день в 05:00 UTC cron делал `restart` всех трёх роботов.
+2. **`systemctl restart` поднимает сервис даже если он `stopped` + `disabled`.** Документированное поведение systemd.
+3. **Правка `restart` не сохранялась** — при редактировании через `nano` выход был без сохранения. Строка оставалась активной.
+4. **`validate_crontab.sh` — сломан:** читает `/root/finlab/infrastructure/crontab.txt`, которой **не существует**. Скрипт бежит каждый час, но всегда false → **не откатывает** crontab. Не причина, но вводит в заблуждение.
+5. **`Restart=always` + `WantedBy=multi-user.target`** в unit-файлах — если процесс упадёт, systemd поднимет через 10 сек; при ребуте сервера роботы тоже поднимутся.
+
+### 🛠 РЕШЕНИЕ (выполнено)
+
+**Cron (4 строки закомментированы):**
+- строка 2: `restart` роботов
+- строка 59: `validate_crontab.sh`
+- строка 72: `weekly_pairs_optimization.py`
+- строка 87: дубликат `futures_h4_aggregator.py` (оставлена 69 — `45 17 * * *`)
+
+Эталон crontab: `scripts/crontab/crontab_20260927.txt`.
+
+**systemd (masked):**
+- `systemctl disable` ×3 → убраны из `.wants`.
+- `mv` unit-файлов в `backups/systemd_units_20260927_204555/` (иначе `mask` падает с `File already exists`).
+- `systemctl daemon-reload` + `systemctl mask` ×3.
+- `is-enabled` → `masked` ×3.
+- `systemctl start/restart` → ошибка `Unit is masked`.
+- `/etc/systemd/system/finlab-*.service` → симлинки → `/dev/null`.
+
+**Проверено:**
+- `ps aux` → пусто.
+- `is-active` → `inactive` ×3.
+- `.wants` → только `dashboard` + `http`.
+- cron: 4 строки закомментированы, 1 активная (`futures_h4_aggregator` 17:45).
+
+### 📋 БЭКЛОГ (задачи, не сегодня)
+
+**Задача 1. Закрыть 3 бумажные позиции в `robots/pairs_robot.db`:**
+- id=77 GAZPF-GZ_M10 SHORT_SPREAD, entry 2026-09-23 07:26
+- id=80 WUSH-WU_M10 LONG_SPREAD, entry 2026-09-23 10:36
+- id=85 SNGSP-SG_M10 LONG_SPREAD, entry 2026-09-25 11:50
+- Все `OPEN`, `pnl=0`. `systemctl stop` не закрывает позиции → остаются `OPEN` навсегда.
+- Решение: пометить `CLOSED` через скрипт (бумага, PnL=0).
+
+**Задача 2. Баг дашборда `finlab_dashboard/app_v2.py`:**
+- У **всех трёх** роботов кнопки `⏸️ Пауза` и `🛑 Стоп` шлют **одну и ту же** команду `systemctl stop`.
+- Визуально `Стоп` → «выключен», `Пауза` → «на паузе» — **обманка UI**.
+- **`Стоп` не закрывает позиции** — просто убивает процесс, позиции остаются `OPEN`.
+- Строки: ~4367, ~4401 (пары); ~4688 и далее (stocks); аналогично для futures.
+- Решение: `Стоп` → graceful shutdown (робот по `SIGTERM` закрывает позиции, потом выходит). `Пауза` → реальная пауза (робот жив, но не открывает новые).
+
+**Задача 3. VK-бот не шлёт уведомления при `systemctl stop`:**
+- Роботы «остановлены», но уведомления о закрытии позиций не пришло.
+- Гипотеза: роботы не обрабатывают `SIGTERM` как «закрыть всё и выйти», или VK-бот не подключён к событию `stop`.
+- Решение: добавить обработчик `SIGTERM` в роботах + триггер уведомления в VK-боте.
+
+### 📝 УРОКИ
+
+1. **`systemctl stop` без правки cron — временная мера.** Всегда проверять cron/systemd-timer на `restart`.
+2. **`systemctl mask` падает с `File already exists`, если unit-файл в `/etc/systemd/system/`.** Правильный путь: `mv` unit-файла → `daemon-reload` → `mask`.
+3. **После `nano` с важным файлом — проверять результат** (`grep`, `md5`), а не верить, что «сохранил».
+4. **`systemctl disable` ≠ `mask`.** `disable` убирает автозапуск, но не запрещает `start/restart`.
+5. **`systemctl stop` не закрывает позиции робота.** Для этого нужен обработчик `SIGTERM` в роботе.
