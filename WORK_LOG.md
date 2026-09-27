@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-27 21:27 MSK | COMMIT: e95baf1 | LINES: 2878 -->
+<!-- VERSION: 2026-09-27 21:29 MSK | COMMIT: c0928ed | LINES: 2899 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2876,3 +2876,24 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - Признак forced close кладём в exit_reason (futures / stocks / baseline). Для pairs — только exit_time + pnl=0.
 - UPDATE писать строго по .schema (sqlite3 <db> ".schema"), не по шаблону.
 - systemctl stop НЕ закрывает позиции робота — это отдельная задача, чистится вручную.
+
+## 28.09.2026 (понедельник) — УТОЧНЕНИЕ к записи о forced close: baseline был НЕ пустой
+
+### Что уточняется
+- Предыдущая запись содержала плейсхолдер `futures_robot_baseline.db → <N>` — считать её черновой.
+- Фактические цифры по baseline:
+  - до правки OPEN: **12**
+  - UPDATE: status='CLOSED', exit_time=datetime('now'), exit_reason='FORCED_CLOSE', pnl=0
+  - closed_rows_baseline = 12
+  - после правки OPEN: 0
+
+### Итоговая картина OPEN по 4 БД (до → после)
+- pairs_robot.db              → 3 → 0
+- futures_robot.db            → 0 → 0
+- stocks_robot.db             → 0 → 0
+- futures_robot_baseline.db   → 12 → 0
+
+### Вывод
+- Единственный робот, который набрал бумажные позиции за инцидент 26–27.09 — **futures_robot_baseline** (12 шт). При этом он `disabled`, но **НЕ masked** — то есть мог быть поднят cron'ом / restart'ом.
+- Решение: в ближайшее время — либо `mask` baseline (по процедуре mv → daemon-reload → mask), либо явный контроль cron-упоминаний + daily-check.
+- Проверка ШАГ 1 брифинга (ps aux / is-active / is-enabled / .wants / baseline masked?) — обязательна.
