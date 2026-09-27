@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-27 21:29 MSK | COMMIT: c0928ed | LINES: 2899 -->
+<!-- VERSION: 2026-09-27 21:31 MSK | COMMIT: fc14db1 | LINES: 2916 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2897,3 +2897,20 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - Единственный робот, который набрал бумажные позиции за инцидент 26–27.09 — **futures_robot_baseline** (12 шт). При этом он `disabled`, но **НЕ masked** — то есть мог быть поднят cron'ом / restart'ом.
 - Решение: в ближайшее время — либо `mask` baseline (по процедуре mv → daemon-reload → mask), либо явный контроль cron-упоминаний + daily-check.
 - Проверка ШАГ 1 брифинга (ps aux / is-active / is-enabled / .wants / baseline masked?) — обязательна.
+
+## 28.09.2026 (понедельник) — baseline замаскирован
+
+### Что сделано
+- По итогам ШАГ 1 брифинга: роботы не поднялись (ps пусто, is-active inactive ×3, is-enabled masked ×3, .wants только dashboard+http).
+- baseline: был `disabled`, НЕ masked, unit-файл живой в /etc/systemd/system/ — это единственный робот, набравший 12 бумажных позиций за инцидент 26–27.09.
+- Применена процедура 27.09:
+  - BAK=backups/systemd_units_baseline_<TS>
+  - mv /etc/systemd/system/finlab-futures-baseline.service $BAK/
+  - systemctl daemon-reload
+  - systemctl mask finlab-futures-baseline.service
+- Проверено: is-enabled → masked, is-active → inactive, unit-файл → симлинк на /dev/null.
+- cron-упоминаний baseline нет (grep по /etc/crontab, /etc/cron.d/, /var/spool/cron/crontabs/ — пусто).
+
+### Решение
+Все 4 робота (pairs, futures, stocks, futures_baseline) замаскированы. Риск повторного инцидента типа 27.09 закрыт на уровне systemd.
+Урок: `disabled` НЕ равно `masked`. `systemctl stop` + `disabled` не защищают от `systemctl restart`/`start`. Политика: любой робот, который может набрать позиции, — только `masked`.
