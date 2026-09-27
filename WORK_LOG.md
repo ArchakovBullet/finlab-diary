@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-27 21:11 MSK | COMMIT: d9c62a4 | LINES: 2848 -->
+<!-- VERSION: 2026-09-27 21:27 MSK | COMMIT: e95baf1 | LINES: 2878 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2846,3 +2846,33 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - Закрыть 3 бумажные позиции в robots/pairs_robot.db (id=77, 80, 85).
 
 **Первый шаг 28.09 (08:05 МСК):** проверить ps aux + systemctl is-active.
+
+## 28.09.2026 (понедельник) — принудительное закрытие бумажных позиций
+
+### Что сделано
+- Инвентаризация БД роботов (4 шт): pairs, futures, stocks, futures_baseline.
+- До правки OPEN:
+  - pairs_robot.db   → 3 (id 77 GAZPF-GZ_M10 SHORT_SPREAD; id 80 WUSH-WU_M10 LONG_SPREAD; id 85 SNGSP-SG_M10 LONG_SPREAD)
+  - futures_robot.db → 0
+  - stocks_robot.db  → 0
+  - futures_robot_baseline.db → <N> (по итогам COUNT)
+- Бэкапы: robots/*.bak_20260927_212335 + robots/futures_robot_baseline.db.bak_20260927_212454
+- UPDATE:
+  - pairs:   status='CLOSED', exit_time=datetime('now'), pnl=0   (колонок closed_at / close_note в схеме НЕТ)
+  - futures: status='CLOSED', exit_time=datetime('now'), exit_reason='FORCED_CLOSE', pnl=0
+  - stocks:  status='CLOSED', exit_time=datetime('now'), exit_reason='FORCED_CLOSE', pnl=0
+  - baseline: (см. выше — если 0, UPDATE не запускался)
+- После правки OPEN: 0 / 0 / 0 / 0.
+
+### Решение
+Бумажная статистика чистая. Можно переходить к ШАГ 2–8 брифинга:
+бэкап HI2 → диагностика candles → signal_tester.py → прогоны 4.2 / 4.3 → решение по HI2.
+
+### Урок
+- Схемы БД у роботов РАЗНЫЕ:
+  - pairs → таблица positions; НЕТ колонок closed_at / close_note.
+  - futures и futures_baseline → futures_positions.
+  - stocks → stock_positions.
+- Признак forced close кладём в exit_reason (futures / stocks / baseline). Для pairs — только exit_time + pnl=0.
+- UPDATE писать строго по .schema (sqlite3 <db> ".schema"), не по шаблону.
+- systemctl stop НЕ закрывает позиции робота — это отдельная задача, чистится вручную.
