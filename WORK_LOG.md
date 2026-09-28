@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-27 21:31 MSK | COMMIT: fc14db1 | LINES: 2916 -->
+<!-- VERSION: 2026-09-28 20:25 MSK | COMMIT: 06369a5 | LINES: 2958 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2914,3 +2914,45 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 ### Решение
 Все 4 робота (pairs, futures, stocks, futures_baseline) замаскированы. Риск повторного инцидента типа 27.09 закрыт на уровне systemd.
 Урок: `disabled` НЕ равно `masked`. `systemctl stop` + `disabled` не защищают от `systemctl restart`/`start`. Политика: любой робот, который может набрать позиции, — только `masked`.
+
+## 28.09.2026 (понедельник) — проверка сборщиков + фикс lqdt keyring
+
+### Что сделано
+- Проверка crontab: `crontab -l` совпадает с эталоном 27.09 (scripts/crontab/crontab_20260927.txt).
+- Проверка сборников и агрегаторов (данные за 27–28.09):
+  - HI2: data/hi2_daily.parquet — mtime 28.09 18:05, rows=7414, last=2026-09-27, tickers=216,
+    cols: ticker, engine, tradedate, hhi_agressive(_buy/_sell), hhi_buy, hhi_sell,
+    hhi_netflow_buy/sell, hhi_passive(_buy/_sell), hhi_volume. ✅
+  - futoi_1h: rows=51953, mtime 28.09 20:05. futoi_4h: mtime 28.09 20:10 (15196 строк, последняя 28.09 20:00). ✅
+  - funding: rows=973, last 28.09. sector_indices (IMOEX/MOEXCH/MOEXCN): last 28.09. ✅
+  - candles D1: 299 файлов, last 28.09, колонки ['open','close','high','low','value','volume','begin','end']. ✅
+  - mega_alerts: 303 файла. supercandles: 134. tradestats: 32. Все mtime 28.09. ✅
+- hi2_aggregate_cron.log: ColumnNotFoundError за 2026-09-28 ОТСУТСТВУЕТ (grep пуст) — старые логи до фикса secid→ticker. ✅
+- futoi_4h_cron.log: старые can't open file — исторические, файл futoi_4h_aggregator.py существует. ✅
+- push_supercandles: Push completed (работает, но токен ghp_... в remote URL — техбэклог).
+
+### Фикс lqdt keyring
+- Симптом: lqdt_collector ругался `option 'token0' in section 'MOEXPy' already exists`
+  (~/.local/share/python_keyring/keyring_pass.cfg line 17) + повторная порча файла мусорной строкой.
+- Решение:
+  - Бэкап: keyring_pass.cfg.bak_20260928_201500 (2210 байт).
+  - Откат из бэкапа после случайной порчи nano.
+  - scripts/fix_keyring_dup.py — удаляет дублирующиеся ключи в [MOEXPy],
+    оставляет первый, делает свой бэкап, валидирует configparser.
+  - Результат: удалён 1 дубликат (token0), валидация OK, grep '^token0' → 1.
+- lqdt после фикса: `INFO | LQDT: 93 дневных свечей, последняя: 2.0961` — без keyring-ошибок. ✅
+
+### Решение
+Блокеров для HI2 нет. Переходим к ШАГ 2–8 брифинга:
+бэкап data/hi2_daily.parquet → signal_tester.py → прогоны 4.2 / 4.3 → решение по HI2.
+
+### Техбэклог (не сегодня)
+- push_supercandles: токен ghp_... в remote URL — вынести в credential.helper.
+- HHRU_D1.parquet отсутствует (робот masked).
+- FinLabPy/Utils/Logger.py:1 — SyntaxWarning: invalid escape sequence '\P' (docstring с E:\Python\...).
+- Кнопки Pause/Stop в дашборде + VK-уведомление при systemctl stop.
+- Атомарное закрытие парных ног (pairs).
+
+### Урок
+- keyring_pass.cfg (многострочные base64) — править ТОЛЬКО Python-скриптом, не nano/sed.
+- В nano нельзя вставлять команды из шелла — попадут в файл как текст.
