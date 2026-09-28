@@ -1,4 +1,4 @@
-<!-- VERSION: 2026-09-28 20:25 MSK | COMMIT: 06369a5 | LINES: 2958 -->
+<!-- VERSION: 2026-09-28 23:13 MSK | COMMIT: 9ce7e06 | LINES: 3030 -->
 
 ## 15.09.2026 (ночная сессия — большая)
 
@@ -2956,3 +2956,75 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 ### Урок
 - keyring_pass.cfg (многострочные base64) — править ТОЛЬКО Python-скриптом, не nano/sed.
 - В nano нельзя вставлять команды из шелла — попадут в файл как текст.
+
+## 28.09.2026 (понедельник) — Algopack: тесты сигналов, H4-агрегатор
+
+### Что сделано
+- Проверка сборщиков: crontab = эталон 27.09. HI2, futoi, funding, sector_indices, candles, mega_alerts, supercandles, tradestats — все свежие (28.09).
+- Фикс lqdt keyring: удалён дубликат token0 (scripts/fix_keyring_dup.py).
+- H4-агрегатор для акций: создан FinLabPy/DataCollectors/candles_h4_aggregator.py.
+  - Агрегирует H4 из M10 (fallback H1) для 298 тикеров.
+  - Результат: data/candles/{ticker}_H4.parquet, колонки как у D1/H1.
+  - Cron: 30 18 * * * (21:30 МСК), лог logs/candles_h4_aggregate_cron.log.
+  - Бэкап crontab: backups/crontab_20260928_230418.txt.
+- Тесты сигналов (scripts/):
+  - signal_tester.py — единый шаблон (test_signal, purged_walk_forward, add_hi2_score).
+  - megaalerts_edge_test.py — дневной горизонт.
+  - megaalerts_wf_test.py — walk-forward + композит.
+  - megaalerts_synergy.py — синергия с HI2, IMOEX, объёмом.
+  - megaalerts_triple_test.py — синергия MegaAlerts + FutOI + TradeStats.
+  - megaalerts_validate.py — валидация (выбросы, look-ahead).
+  - test_tradestats_extra.py — дополнительные метрики TradeStats.
+  - test_futoi_extra.py — дополнительные метрики FutOI.
+
+### Результаты тестов
+
+ИСПОЛЬЗУЕМ (подтверждено на данных):
+- MegaAlerts на акциях:
+  - oi_low_min      → ЛОНГ, +2.12% (5д), net +1.68%, WR 66.1%, n=112 (median +2.27% — не выбросы)
+  - vol_b_99_9_pctl → ЛОНГ, +1.52% (5д), net +1.07%, WR 78.6%, n=28
+  - net_vol_99_9_pctl− → ШОРТ, −1.37% (5д), net +0.5%, n=16
+- TradeStats на фьючерсах (5д, n=607):
+  - val_net верхний квартиль  → +0.87% net (лучший)
+  - val_net нижний квартиль   → −1.00% net (в шорт)
+  - trades_net верхний        → +0.62% net
+  - trades_net нижний         → −0.96% net (в шорт)
+  - disb (1д)                 → +0.44% / −0.60% net
+- FutOI на фьючерсах (5д, n=458-459):
+  - fiz_buy_ratio < 0.2q → ЛОНГ, +1.08%, excess +0.62%
+  - fiz_net < 0.2q       → ЛОНГ, +0.94%, excess +0.48%
+  - yur_buy_ratio > 0.8q → ЛОНГ, +0.92%, excess +0.46%
+
+ОТМЕТАЕМ:
+- HI2 — walk-forward провал (fold 1: net_edge 0.16%, Sharpe −0.11), 42 дня данных.
+- SuperCandles — направления нет, только vol→|fwd| = 0.24 (волатильность).
+- MegaAlerts pr_high_max — выбросы (median −0.79% << mean −5.02%).
+- Синергия MegaAlerts + FutOI — артефакт дублей (n=1-3).
+- Синергия с HI2 / IMOEX — не подтверждена.
+
+ОТКРЫТИЯ:
+- TradeStats val_net / trades_net — СИЛЬНЕЕ disb в 2 раза (на 1д и 5д).
+- FutOI yur_buy_ratio / yur_net — прямой сигнал, fiz_buy_ratio / fiz_net — контр-сигнал.
+- Протестировано 15% метрик, 85% — потенциал (oi_delta, im, hhi_passive и др.).
+
+### Решение
+- Строим роботов:
+  1. megaalerts_robot.py — на акциях (лонг/шорт по алертам).
+  2. futures_algopack_robot.py — на фьючерсах (FutOI + TradeStats).
+- Заменяют: stocks_robot + futures_robot.
+- pairs_robot — оставляем (работаем позже, дополняем сигналами).
+- futures_robot_baseline — удалить.
+- H4-агрегатор — для pairs (H4-пары теперь считаются).
+
+### Техбэклог (не сегодня)
+- push_supercandles: токен в remote URL → credential.helper.
+- HHRU_D1.parquet отсутствует (робот masked).
+- FinLabPy/Utils/Logger.py:1 — escape sequence '\P'.
+- Кнопки Pause/Stop в дашборде + VK-уведомления.
+- Атомарное закрытие парных ног (pairs).
+- pairs: оптимизатор долгий (timeout 300s), H4 теперь есть — проверить в фоне.
+
+### Урок
+- keyring_pass.cfg (base64) — только Python-скриптом.
+- H4 для акций не собирался — баг конфигурации, починен.
+- Валидация результатов обязательна: +6.7% оказались артефактом дублей.
