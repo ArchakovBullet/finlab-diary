@@ -57,7 +57,7 @@ STOP_ATR_MULT = 3.2
 BE_MOVE_ATR = 1.5
 BE_TARGET_MULT = 1.002
 BE_EPS = 0.002
-COOLDOWN_HOURS = 4
+COOLDOWN_HOURS = 8  # как в futures_robot.py (whipsaw protection)
 HOLD_DAYS = 5  # горизонт сигнала
 DEPOSIT = 100000
 CHECK_INTERVAL = 3600
@@ -213,10 +213,12 @@ def close_position(position_id, ticker, direction, exit_price, reason, entry_pri
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # PnL с учётом point_value (фьючерсы)
+    point_value = CONTRACT_POINTS.get(ticker, 1.0)
     if direction == 'LONG':
-        pnl = (exit_price - entry_price) * volume
+        pnl = (exit_price - entry_price) * point_value * volume
     else:
-        pnl = (entry_price - exit_price) * volume
+        pnl = (entry_price - exit_price) * point_value * volume
 
     # LQDT diff
     cursor.execute('SELECT entry_time FROM algopack_positions WHERE id = ?', (position_id,))
