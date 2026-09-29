@@ -3086,3 +3086,9 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - Walk-forward обязателен: vol_b_99_9_pctl был артефактом дублей.
 - LQDT-логика была в дашборде (4 копии), вынесена в модуль.
 - RI — исключён из торговли (аномальный point_value).
+
+### 29.09.2026 — chore: .gitignore для runtime БД роботов
+- Добавлены паттерны: robots/*.db, robots/*.db.bak_*, robots/*.log, robots/*_command.txt, robots/*_state.json, robots/__pycache__/.
+- futures_algopack_robot.db больше не показывается в git status.
+- Старые БД (pairs, futures, stocks, baseline) не отслеживались git и не затронуты.
+- Коммит: 4092345.
