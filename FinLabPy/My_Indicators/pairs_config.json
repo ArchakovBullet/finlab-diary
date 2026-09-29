@@ -2289,7 +2289,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "RN-TN_M10": {
       "pair_name": "RN-TN_M10",
@@ -2306,7 +2306,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "LK-IR_M10": {
       "pair_name": "LK-IR_M10",
@@ -2374,7 +2374,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "LK-TN_H1": {
       "pair_name": "LK-TN_H1",
@@ -2442,7 +2442,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "LK-HY_H4": {
       "pair_name": "LK-HY_H4",
