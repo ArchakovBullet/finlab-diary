@@ -74,3 +74,11 @@ public/
 robots/futures_robot_baseline.db
 robots/*_baseline.db
 backup_crontab_*.txt
+# Runtime DBs and logs (robots)
+robots/*.db
+robots/*.db.bak_*
+robots/*.db-journal
+robots/*.log
+robots/*_command.txt
+robots/*_state.json
+robots/__pycache__/
