@@ -3028,3 +3028,61 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - keyring_pass.cfg (base64) — только Python-скриптом.
 - H4 для акций не собирался — баг конфигурации, починен.
 - Валидация результатов обязательна: +6.7% оказались артефактом дублей.
+
+## 29.09.2026 (вторник) — ПРОРЫВ: TradeStats + FutOI
+
+### Что сделано
+- MIGRATION_SUMMARY.md: мусорный откачен, создан осмысленный (b49a880).
+- pairs_config.json: 4 пустышки отключены (LK-TN_M10, RN-TN_M10, LK-RN_H1, HY-IR_H1).
+- LQDT: вынесен в FinLabPy/Utils/lqdt_benchmark.py (общий модуль).
+- Оптимизатор пар: перепрогнан с H4 (ROSN-TATN_H4 — Sharpe 1.20, но trades=6, отключён).
+- Коллектор MegaAlerts: дедуп при записи (e6819a1).
+- MegaAlerts: 86% дублей (9765→1395). oi_low_min только фьючерсы (12 тикеров). vol_b мёртв после дедупа. net_vol- слабый (n=19-37).
+
+### ПРОРЫВ: TradeStats + FutOI
+**Walk-forward 3/3 ✅:**
+- vol_net (5д): Fold1 +1.12%, Fold2 +4.82% (Sharpe 2.12), Fold3 +2.76% (Sharpe 3.97)
+- Полный: top +1.09%, WR 57.9%, Sharpe 1.53
+
+**Sharpe по сигналам (5д):**
+| Сигнал | TOP | WR | Sharpe | Spread |
+|---|---|---|---|---|
+| sec_pr_range | +1.20% | 58.8% | 1.68 | +2.71% |
+| vol_net | +1.09% | 57.9% | 1.53 | +2.86% |
+| pr_body | +1.01% | 58.6% | 1.27 | +2.80% |
+| yur_buy_ratio | +1.58% | — | 2.47 | — |
+| val_net | +0.74% | 56.3% | 1.19 | +1.86% |
+| yur_long_ratio | +0.82% | — | 1.36 | +1.30% |
+| triple (все 3) | +1.23% | 63.5% | 1.96 | +3.20% |
+
+**На акциях (10 тикеров):**
+- val_net: +1.03%, WR 57.6%, Sharpe 1.34, spread +3.61%
+- vol_net: +0.94%, WR 57.9%, Sharpe 1.27, spread +3.25%
+
+### Создано
+- FinLabPy/My_Indicators/algopack_signals.py — комбинированный сигнал (a54cc2b).
+- robots/futures_algopack_robot.py — 21 тикер (RI исключён), paper mode, masked (3d7b9e8).
+- Systemd: finlab-futures-algopack.service (masked).
+- contract_points.json: дополнен 10 тикерами.
+
+### Сигналы на 29.09 (smoke-test)
+- BR SHORT score=4, CR SHORT score=4, CNYRUBF LONG score=5, GAZPF LONG score=5, SI SHORT score=5, USDRUBF SHORT score=5, RI LONG score=4 (исключён).
+
+### Что не сделано
+- Размаскировать и запустить futures_algopack_robot.
+- tradestats_stocks_robot.py (10 акций).
+- Дашборд с Sharpe + beat_lqdt_rate.
+- Отключить cron HI2 (архив).
+- HI2 + TradeStats (приоритет 3).
+
+### Следующие шаги
+1. Размаскировать futures_algopack_robot, запустить, наблюдать.
+2. tradestats_stocks_robot.py — val_net + vol_net на GAZP, GMKN, HYDR, IRAO, LKOH, PLZL, ROSN, SBER, TATN, VTBR.
+3. Дашборд.
+4. WORK_LOG + commit + push в 2 remote.
+
+### Урок
+- Дубли MegaAlerts — не append, а API (или структура reference). Дедуп по (ticker, tradedate, alert_type).
+- Walk-forward обязателен: vol_b_99_9_pctl был артефактом дублей.
+- LQDT-логика была в дашборде (4 копии), вынесена в модуль.
+- RI — исключён из торговли (аномальный point_value).
