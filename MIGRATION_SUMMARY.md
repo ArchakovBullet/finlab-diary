@@ -63,3 +63,53 @@
 2. Написать futures_algopack_robot.py (фьючерсы, FutOI + TradeStats)
 3. Обновить дашборд
 4. Перепрогнать оптимизатор пар (H4 данные появились 29.09)
+
+## 29.09.2026 — ПРОРЫВ: TradeStats + FutOI
+
+### Walk-forward (3 фолда) — ✅ СТАБИЛЬНО
+
+**vol_net (TradeStats, 5д):**
+- Fold 1: spread +1.12%
+- Fold 2: spread +4.82% (Sharpe 2.12)
+- Fold 3: spread +2.76% (Sharpe 3.97)
+- Полный период: top +1.09%, WR 57.9%, Sharpe 1.53
+
+### Sharpe по сигналам (5д)
+
+| Сигнал | TOP mean | TOP WR | TOP Sharpe | Spread |
+|---|---|---|---|---|
+| vol_net | +1.09% | 57.9% | 1.53 | +2.86% |
+| val_net | +0.74% | 56.3% | 1.19 | +1.86% |
+| trades_net | +0.57% | 53.8% | 0.77 | +1.82% |
+| triple (все 3) | +1.23% | 63.5% | 1.96 | +3.20% |
+
+### TradeStats на АКЦИЯХ (10 тикеров: GAZP, GMKN, HYDR, IRAO, LKOH, PLZL, ROSN, SBER, TATN, VTBR)
+
+- val_net: TOP +1.03%, WR 57.6%, Sharpe 1.34, spread +3.61%
+- vol_net: TOP +0.94%, WR 57.9%, Sharpe 1.27, spread +3.25%
+- trades_net: TOP +0.45%, WR 52.6%, Sharpe 0.58, spread +2.68%
+
+**Вывод:** TradeStats работает и на акциях, и на фьючерсах.
+
+### FutOI (5д)
+
+- yur_buy_ratio top: +1.58%, Sharpe 2.47  ← СИЛЬНЕЕ val_net
+- fiz_buy_ratio bot: +0.71%, Sharpe 0.96
+- Комбинация val_net + yur_buy_ratio: n=85, Sharpe 2.03
+
+### План
+
+**Приоритет 1 (сегодня):**
+1. futures_algopack_robot.py — vol_net + val_net + trades_net + yur_buy_ratio (5д)
+2. tradestats_stocks_robot.py — val_net + vol_net на 10 акциях (5д)
+
+**Приоритет 2:**
+3. Дашборд с beat_lqdt_rate + Sharpe
+
+**Приоритет 3 (HI2):**
+4. HI2 + TradeStats комбинация — если синергия, вернуть HI2
+
+**Отключить:**
+- HI2 cron (архив, файлы оставить)
+- SuperCandles — оставить как фильтр
+- MegaAlerts — накапливаем
