@@ -13,10 +13,15 @@
 - futures_robot_baseline — удалён (masked)
 
 ### Сигналы — подтверждены
-**MegaAlerts (акции, 5д, комиссия 0.28%):**
-- oi_low_min → ЛОНГ, +2.12%, WR 66.1%, n=112
-- vol_b_99_9_pctl → ЛОНГ, +1.52%, WR 78.6%, n=28
-- net_vol_99_9_pctl− → ШОРТ, −1.37%, n=16
+**MegaAlerts (акции, 5д, комиссия 0.28%) — ПОСЛЕ ДЕДУПА:**
+- vol_b_99_9_pctl → ЛОНГ, n=122 (тикеры: AFLT, ALRS, BANE, BELU, CHMF, GAZP, GMKN, HYDR, IRAO, ...)
+- net_vol_99_9_pctl− → ШОРТ, n=73 (тикеры: ABIO, AFLT, AKRN, BANEP, BELU, GAZP, HYDR, LKOH, ...)
+- ⚠️ oi_low_min — ИСКЛЮЧЁН: только фьючерсы (AS, BB, CI, DD, FE, I2, IN, IS, MA, ND, PI, PS), n=12 после дедупа. В акциях не использовать.
+
+**MegaAlerts — критично:**
+- 86% строк в данных — дубли (9765 → 1395).
+- Правильный ключ дедупа: (ticker, tradedate, alert_type).
+- Коллектор дописывает (append без дедупа) — баг, чинить.
 
 **FutOI (фьючерсы, 5д):**
 - yur_buy_ratio > 0.8q → ЛОНГ, +0.92%, n=470
