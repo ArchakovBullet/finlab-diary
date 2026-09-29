@@ -45,9 +45,10 @@ except Exception:
     CONTRACT_POINTS = {}
 
 # Тикеры: 22 фьючерса (пересечение TradeStats + FutOI)
+# RI исключён (аномальные показатели point_value). Данные собираются, но не торгуем.
 TICKERS = [
     'BR', 'CE', 'CNYRUBF', 'CR', 'ED', 'EURRUBF', 'FF', 'GAZPF',
-    'GD', 'GLDRUBF', 'IMOEXF', 'MX', 'OJ', 'PD', 'PT', 'RI',
+    'GD', 'GLDRUBF', 'IMOEXF', 'MX', 'OJ', 'PD', 'PT',
     'SBERF', 'SI', 'SV', 'USDRUBF', 'VI', 'W4',
 ]
 
