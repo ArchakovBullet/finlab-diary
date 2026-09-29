@@ -149,6 +149,14 @@ class MegaAlertCollector:
 
         try:
             df = pl.DataFrame(normalized)
+            # Дедуп: один сигнал в день по ключу (secid, tradedate, tradetime, alert_type, threshold, value)
+            dedup_cols = [c for c in ['secid','tradedate','tradetime','alert_type','threshold','value'] if c in df.columns]
+            if dedup_cols:
+                before = len(df)
+                df = df.unique(subset=dedup_cols, keep='first')
+                after = len(df)
+                if before != after:
+                    logger.info(f'  {ticker}: дедуп {before} → {after}')
             df.write_parquet(file_path)
         except Exception as e:
             logger.warning(f'{ticker}: ошибка создания DataFrame: {e}')
