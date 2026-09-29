@@ -1,12 +1,12 @@
 # START HERE — 29.09.2026
 
 ## Commit
-- supercandles-data: aab270e
+- supercandles-data: 5ac7bf3
 - WORK_LOG: 625519a
 
 ## Ссылки (raw + commit hash)
-https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/aab270e/WORK_LOG.md
-https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/aab270e/README.md
+https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/5ac7bf3/WORK_LOG.md
+https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/5ac7bf3/README.md
 
 ## План на день
 1. pairs_config.json — проверить и закоммитить.
