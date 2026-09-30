@@ -241,9 +241,18 @@ def get_last_tradedate(ticker):
         return None
 
 
+def is_perpetual(ticker):
+    """Вечный фьючерс — нет LASTTRADEDATE в кеше."""
+    last = get_last_tradedate(ticker)
+    return last is None
+
+
 def is_expiring_soon(ticker, days=2):
-    """Проверить, истекает ли контракт в ближайшие N дней."""
+    """Проверить, истекает ли контракт в ближайшие N дней.
+    Возвращает False для вечных фьючерсов (у них нет экспирации)."""
     from datetime import date as _date
+    if is_perpetual(ticker):
+        return False
     last = get_last_tradedate(ticker)
     if last is None:
         return False
@@ -539,15 +548,16 @@ def check_stops_only():
 
             # Безубыток
             _be_target = entry_price * BE_TARGET_MULT
+            _be_move = get_be_move(ticker)
             if direction == 'LONG':
-                if high >= entry_price + entry_atr * BE_MOVE_ATR:
+                if high >= entry_price + entry_atr * _be_move:
                     if stop_price < _be_target:
                         stop_price = _be_target
                         cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
                         conn.commit()
                         print(f'🔒 {ticker}: стоп в BE+комиссия ({stop_price:.4f})')
             else:  # SHORT
-                if low <= entry_price - entry_atr * BE_MOVE_ATR:
+                if low <= entry_price - entry_atr * _be_move:
                     if stop_price > _be_target:
                         stop_price = _be_target
                         cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
