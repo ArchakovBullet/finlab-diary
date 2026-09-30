@@ -1139,7 +1139,7 @@ with st.sidebar.expander("ℹ️ Как это работает?"):
 
 st.sidebar.markdown("---")
 
-page = st.sidebar.radio("📌 Навигация", ["📊 Сводка", "📋 Статус сборщиков", "📊 Торговые роботы", "🔧 Техинфо"], index=0)
+page = st.sidebar.radio("📌 Навигация", ["📋 Статус сборщиков", "📊 Торговые роботы", "🔧 Техинфо"], index=None)
 st.sidebar.markdown("---")
 st.sidebar.info("**FinLabPy v0.2.0**\n\nКурс: FutOI + HI2 + ML\n\nСервер: `lvkseaqdin`\nДанные: Parquet")
 # ========== РОУТИНГ СТРАНИЦ ==========
@@ -4140,7 +4140,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📉 Робот фьючерсов", "📊 Робот фьючерсов (Algopack)"],
+        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов (Algopack)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -4169,20 +4169,20 @@ elif page == "📊 Торговые роботы":
                 'db': _pairs_db
             }
 
-        # Фьючерсный робот
-        _fut_db = Path('/root/finlab/robots/futures_robot.db')
-        if _fut_db.exists():
-            _conn = _sqlite3.connect(_fut_db)
-            _closed_fut = pd.read_sql_query('SELECT * FROM futures_positions WHERE status="CLOSED"', _conn)
-            _open_fut = pd.read_sql_query('SELECT * FROM futures_positions WHERE status="OPEN"', _conn)
+        # Algopack-робот (заменяет старый «Робот фьючерсов»)
+        _alg_db = Path('/root/finlab/robots/futures_algopack_robot.db')
+        if _alg_db.exists():
+            _conn = _sqlite3.connect(_alg_db)
+            _closed_alg = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
+            _open_alg = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="OPEN"', _conn)
             _conn.close()
-            _fut_pnl = _closed_fut['pnl'].sum()
-            _fut_wr = _calc_wr(_closed_fut)
-            _robots_stats['📉 Робот фьючерсов'] = {
-                'open': len(_open_fut),
-                'pnl': _fut_pnl,
-                'wr': _fut_wr,
-                'db': _fut_db
+            _alg_pnl = _closed_alg['pnl'].sum() if len(_closed_alg) > 0 else 0
+            _alg_wr = _calc_wr(_closed_alg)
+            _robots_stats['📊 Робот фьючерсов (Algopack)'] = {
+                'open': len(_open_alg),
+                'pnl': _alg_pnl,
+                'wr': _alg_wr,
+                'db': _alg_db
             }
 
         # Робот акций
@@ -4204,7 +4204,13 @@ elif page == "📊 Торговые роботы":
         # Общая аналитика
         _total_pnl_all = sum(s['pnl'] for s in _robots_stats.values())
         _total_open = sum(s['open'] for s in _robots_stats.values())
-        _active_robots = len([s for s in _robots_stats.values() if s['open'] > 0 or s['pnl'] != 0])
+        # «Активных» = systemctl is-active
+        import subprocess as _sp
+        _active_robots = 0
+        for _svc in ['finlab-robot', 'finlab-stocks-robot', 'finlab-futures-algopack']:
+            _r = _sp.run(['systemctl', 'is-active', _svc], capture_output=True, text=True)
+            if _r.stdout.strip() == 'active':
+                _active_robots += 1
 
         st.markdown("---")
         st.subheader("📊 ОБЩАЯ АНАЛИТИКА")
@@ -4798,7 +4804,7 @@ elif page == "📊 Торговые роботы":
         else:
             st.warning("БД робота акций не найдена")
 
-    elif robot_tab == "📉 Робот фьючерсов":
+    # elif robot_tab == "📉 Робот фьючерсов":  # ЗАКОММЕНТИРОВАНО 30.09.2026 (заменён на Algopack)
         st.subheader("📉 Робот фьючерсов")
         st.info("Бумажный режим — виртуальные сделки без реального исполнения")
 
