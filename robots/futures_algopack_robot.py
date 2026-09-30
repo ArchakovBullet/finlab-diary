@@ -54,6 +54,38 @@ TICKERS = [
     'SBERF', 'SI', 'SV', 'USDRUBF', 'VI', 'W4',
 ]
 
+# ========== ИНДИВИДУАЛЬНЫЕ СТОПЫ (из futures_robot.py) ==========
+def load_stop_config():
+    cfg_file = ROOT / 'robots' / 'stop_config.json'
+    if not cfg_file.exists():
+        return {}, {}, 1.5
+    try:
+        import json as _json_sc
+        with open(cfg_file) as f:
+            cfg = _json_sc.load(f)
+        return (
+            cfg.get('individual', {}),
+            cfg.get('individual_be', {}),
+            cfg.get('BE_MOVE_ATR', 1.5),
+        )
+    except Exception as e:
+        print(f"⚠️ Ошибка чтения stop_config.json: {e}")
+        return {}, {}, 1.5
+
+
+STOP_ATR_INDIVIDUAL, STOP_BE_INDIVIDUAL, STOP_BE_DEFAULT = load_stop_config()
+
+
+def get_stop_mult(ticker):
+    """Множитель ATR для тикера (стоп)."""
+    return STOP_ATR_INDIVIDUAL.get(ticker, STOP_ATR_MULT)
+
+
+def get_be_move(ticker):
+    """Множитель ATR для безубытка."""
+    return STOP_BE_INDIVIDUAL.get(ticker, STOP_BE_DEFAULT)
+
+
 # ========== КОНСТАНТЫ ==========
 MAX_POSITIONS = 15  # было 10
 STOP_ATR_MULT = 3.2
@@ -84,10 +116,140 @@ def send_vk_message(message):
         print(f"⚠️ VK: {e}")
 
 
+# ========== ПРОВЕРКА СВЕЖЕСТИ (из futures_robot.py) ==========
+FRESHNESS_THRESHOLDS = {
+    'M10': 2, 'H1': 4, 'H4': 25, 'D1': 25,
+    'tradestats': 24, 'futoi': 24,
+}
+
+
 def is_moex_trading_day():
-    """Проверить, торговый ли день (не сб/вс)."""
-    wd = datetime.now().weekday()
-    return wd < 5
+    """Проверить, что сегодня торговый день MOEX (с праздниками)."""
+    now = datetime.now()
+    if now.weekday() >= 5:
+        return False
+    no_trade_weekends = [
+        (1,3),(1,4),(1,10),(1,11),(2,14),(2,15),(3,7),(3,8),
+        (3,21),(3,22),(5,9),(5,10),(6,20),(6,21),(8,1),(8,2),
+        (8,15),(8,16),(9,12),(9,13),(10,24),(10,25),(12,5),(12,6),
+    ]
+    no_trade_holidays = [
+        (1,1),(1,2),(1,5),(1,6),(1,7),(1,8),(3,8),(5,9),(12,31),
+    ]
+    md = (now.month, now.day)
+    if md in no_trade_weekends or md in no_trade_holidays:
+        return False
+    return True
+
+
+def is_trading_time():
+    """Проверить торговое время (10:00-18:00 МСК)."""
+    from datetime import timezone, timedelta
+    _now_msk = datetime.now(timezone(timedelta(hours=3)))
+    _hour = _now_msk.hour
+    return (10 <= _hour < 18)
+
+
+def is_tradestats_fresh(ticker):
+    """Проверить свежесть TradeStats. Возвращает (fresh: bool, age_hours: float|None)."""
+    if not is_moex_trading_day():
+        return True, 0.0
+    now_hour = datetime.now().hour
+    if now_hour < 10 or now_hour >= 19:
+        return True, 0.0
+
+    ts_file = DATA_ROOT / 'tradestats' / f'{ticker}_tradestats.parquet'
+    if not ts_file.exists():
+        return False, None
+    try:
+        df = pd.read_parquet(ts_file)
+        if len(df) == 0:
+            return False, None
+        last_row = df.iloc[-1]
+        last_dt = None
+        if 'tradedate' in df.columns:
+            last_dt = pd.to_datetime(last_row['tradedate'])
+        if last_dt is None:
+            return False, None
+        if last_dt.tzinfo is not None:
+            last_dt = last_dt.tz_localize(None)
+        age_hours = (pd.Timestamp.now() - last_dt).total_seconds() / 3600
+        return age_hours <= FRESHNESS_THRESHOLDS['tradestats'], age_hours
+    except Exception as e:
+        print(f"  ⚠️ {ticker}: ошибка проверки TradeStats: {e}")
+        return False, None
+
+
+def is_futoi_fresh(ticker):
+    """Проверить свежесть FutOI. Возвращает (fresh: bool, age_hours: float|None)."""
+    if not is_moex_trading_day():
+        return True, 0.0
+    now_hour = datetime.now().hour
+    if now_hour < 10 or now_hour >= 19:
+        return True, 0.0
+
+    futoi_file = DATA_ROOT / 'futoi_1h' / 'futoi_1h.parquet'
+    if not futoi_file.exists():
+        return False, None
+    try:
+        df = pd.read_parquet(futoi_file)
+        df = df[df['ticker'] == ticker]
+        if len(df) == 0:
+            return False, None
+        last_row = df.iloc[-1]
+        last_dt = None
+        if 'hour' in df.columns:
+            last_dt = pd.to_datetime(last_row['hour'])
+        if last_dt is None:
+            return False, None
+        if last_dt.tzinfo is not None:
+            last_dt = last_dt.tz_localize(None)
+        age_hours = (pd.Timestamp.now() - last_dt).total_seconds() / 3600
+        return age_hours <= FRESHNESS_THRESHOLDS['futoi'], age_hours
+    except Exception as e:
+        print(f"  ⚠️ {ticker}: ошибка проверки FutOI: {e}")
+        return False, None
+
+
+# ========== ЭКСПИРАЦИЯ (из futures_robot.py) ==========
+LAST_TRADEDATE_CACHE_PATH = ROOT / 'robots' / 'contract_last_tradedate.json'
+try:
+    with open(LAST_TRADEDATE_CACHE_PATH, 'r') as _f:
+        import json as _json_exp
+        LAST_TRADEDATE_CACHE = _json_exp.load(_f)
+except Exception:
+    LAST_TRADEDATE_CACHE = {}
+
+
+def get_last_tradedate(ticker):
+    """Получить LASTTRADEDATE для тикера (из кеша)."""
+    try:
+        with open(ROOT / 'FinLabPy' / 'DataCollectors' / 'contract_cache.json') as _f:
+            import json as _json_cc
+            cc = _json_cc.load(_f)
+        code = cc.get(ticker, {}).get('code')
+    except Exception:
+        code = None
+    if not code:
+        return None
+    last_str = LAST_TRADEDATE_CACHE.get(code)
+    if not last_str:
+        return None
+    try:
+        return datetime.strptime(last_str, '%Y-%m-%d').date()
+    except Exception:
+        return None
+
+
+def is_expiring_soon(ticker, days=2):
+    """Проверить, истекает ли контракт в ближайшие N дней."""
+    from datetime import date as _date
+    last = get_last_tradedate(ticker)
+    if last is None:
+        return False
+    today = _date.today()
+    days_left = (last - today).days
+    return days_left <= days
 
 
 def init_db():
@@ -245,10 +407,11 @@ def open_position(ticker, direction, signal_data, price, atr):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    _stop_mult = get_stop_mult(ticker)
     if direction == 'LONG':
-        stop_price = price - atr * STOP_ATR_MULT
+        stop_price = price - atr * _stop_mult
     else:
-        stop_price = price + atr * STOP_ATR_MULT
+        stop_price = price + atr * _stop_mult
 
     signal_type = 'combined'
     signal_details = json.dumps(signal_data.get('tradestats', {}).get('signals', {}) or {})
@@ -449,6 +612,11 @@ def main():
         check_stops_only()
         return
 
+    if not is_trading_time():
+        print('⏰ Вне торгового времени (10:00–18:00) — только стопы')
+        check_stops_only()
+        return
+
     if state.get('paused'):
         print('⏸️ На паузе — только проверка стопов')
         check_stops_only()
@@ -457,6 +625,22 @@ def main():
     open_positions = get_open_positions()
     open_tickers = {p[1] for p in open_positions}
     print(f'\nОткрыто: {len(open_positions)}/{MAX_POSITIONS}')
+
+    # Проверка экспирации — закрыть позиции за 2 дня
+    for pos in open_positions:
+        _pos_id, _ticker, _direction = pos[0], pos[1], pos[2]
+        if is_expiring_soon(_ticker, days=2):
+            print(f'  ⏰ {_ticker}: экспирация через ≤2 дн. — закрываю')
+            try:
+                _m10 = DATA_ROOT / 'candles' / f'{_ticker}_M10.parquet'
+                if _m10.exists():
+                    _df_m10 = pd.read_parquet(_m10)
+                    if len(_df_m10) > 0:
+                        _exit_price = float(_df_m10['close'].iloc[-1])
+                        _entry_price = pos[4]
+                        close_position(_pos_id, _ticker, _direction, _exit_price, 'EXPIRY', _entry_price, 1.0)
+            except Exception as _e:
+                print(f'    ❌ {_ticker}: {_e}')
 
     # Сканирование
     for ticker in TICKERS:
@@ -467,6 +651,19 @@ def main():
             continue
         if is_in_cooldown(ticker):
             print(f'  ⏸️ {ticker}: cooldown')
+            continue
+        if is_expiring_soon(ticker, days=2):
+            print(f'  ⏰ {ticker}: экспирация ≤2 дн. — пропуск')
+            continue
+        _ts_fresh, _ts_age = is_tradestats_fresh(ticker)
+        if not _ts_fresh:
+            _age_str = f'{_ts_age:.1f}ч' if _ts_age else 'нет данных'
+            print(f'  ⚠️ {ticker}: TradeStats устарел ({_age_str}) — пропуск')
+            continue
+        _fo_fresh, _fo_age = is_futoi_fresh(ticker)
+        if not _fo_fresh:
+            _age_str = f'{_fo_age:.1f}ч' if _fo_age else 'нет данных'
+            print(f'  ⚠️ {ticker}: FutOI устарел ({_age_str}) — пропуск')
             continue
 
         try:
