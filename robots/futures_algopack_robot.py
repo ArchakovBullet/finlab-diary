@@ -55,7 +55,7 @@ TICKERS = [
 ]
 
 # ========== КОНСТАНТЫ ==========
-MAX_POSITIONS = 10
+MAX_POSITIONS = 15  # было 10
 STOP_ATR_MULT = 3.2
 BE_MOVE_ATR = 1.5
 BE_TARGET_MULT = 1.002
@@ -500,8 +500,9 @@ def main():
 if __name__ == '__main__':
     import signal as _signal
     def _on_sigterm(signum, frame):
-        print(f'\n📥 Получен SIGTERM')
-        graceful_shutdown()
+        # SIGTERM (systemctl restart/stop) — НЕ закрываем позиции.
+        # Для закрытия — команда STOP через command.txt.
+        print(f'\n📥 Получен SIGTERM — завершение без закрытия позиций')
         raise SystemExit(0)
     _signal.signal(_signal.SIGTERM, _on_sigterm)
     _signal.signal(_signal.SIGINT, _on_sigterm)
