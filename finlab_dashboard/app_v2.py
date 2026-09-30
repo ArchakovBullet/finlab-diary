@@ -5121,8 +5121,13 @@ elif page == "📊 Торговые роботы":
                 st.button("🛑 Стоп", type="secondary", use_container_width=True,
                           key="alg_stop_disabled", disabled=True)
 
-        st.caption("⚠️ PAUSE/STOP применяются в следующем цикле робота (до 1 часа). "
-                   "Для мгновенного — `systemctl restart finlab-futures-algopack` (SIGTERM, позиции сохраняются).")
+        st.caption("⚠️ PAUSE/STOP применяются в следующем цикле робота (до 2.5 мин).")
+
+        # Показать «команда в очереди»
+        if _alg_cmd_path.exists():
+            _cmd_content = _alg_cmd_path.read_text().strip()
+            if _cmd_content:
+                st.warning(f"⚠️ В очереди команда: `{_cmd_content}`. Применится в следующем цикле (≤2.5 мин).")
 
         # Открытые позиции
         if _alg_open_df is not None and len(_alg_open_df) > 0:
