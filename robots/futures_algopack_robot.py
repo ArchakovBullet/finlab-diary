@@ -65,7 +65,7 @@ HOLD_DAYS = 5  # горизонт сигнала
 DEPOSIT = 100000
 CHECK_INTERVAL = 3600
 STOP_CHECK_INTERVAL = 600
-SCORE_MIN = 2  # минимум сигналов для входа
+SCORE_MIN = 3  # минимум сигналов для входа (было 2)
 
 
 def send_vk_message(message):
