@@ -63,7 +63,7 @@ BE_EPS = 0.002
 COOLDOWN_HOURS = 8  # как в futures_robot.py (whipsaw protection)
 HOLD_DAYS = 5  # горизонт сигнала
 DEPOSIT = 100000
-CHECK_INTERVAL = 3600
+CHECK_INTERVAL = 600  # 10 мин (было 3600)
 STOP_CHECK_INTERVAL = 600
 SCORE_MIN = 3  # минимум сигналов для входа (было 2)
 
@@ -510,11 +510,26 @@ if __name__ == '__main__':
     while True:
         try:
             main()
-            print('Ожидание 1 час (стопы каждые 10 мин)...')
-            for i in range(6):
-                time.sleep(STOP_CHECK_INTERVAL)
+            print('Ожидание 10 мин (стопы каждые 2.5 мин)...')
+            for i in range(4):
+                time.sleep(150)  # 2.5 мин
+                # Проверка команды каждые 2.5 мин
+                cmd = read_command()
+                if cmd == 'PAUSE':
+                    state = get_state(); state['paused'] = True; set_state(state)
+                    print('⏸️ PAUSED')
+                    send_vk_message('⏸️ ALGOPACK: пауза')
+                    break
+                elif cmd == 'STOP':
+                    state = get_state(); state['paused'] = False; set_state(state)
+                    graceful_shutdown()
+                    raise SystemExit(0)
+                elif cmd == 'RESUME':
+                    state = get_state(); state['paused'] = False; set_state(state)
+                    print('▶️ RESUMED')
+                    break
                 check_stops_only()
-                print(f'  [{i+1}/6] Стопы проверены')
+                print(f'  [{i+1}/4] Стопы проверены')
         except SystemExit:
             raise
         except KeyboardInterrupt:
