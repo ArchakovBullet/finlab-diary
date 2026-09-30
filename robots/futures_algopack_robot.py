@@ -529,7 +529,7 @@ if __name__ == '__main__':
                     print('▶️ RESUMED')
                     break
                 check_stops_only()
-                print(f'  [{i+1}/4] Стопы проверены')
+                print(f'  [{i+1}/20] Стопы проверены')
         except SystemExit:
             raise
         except KeyboardInterrupt:
