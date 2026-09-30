@@ -510,10 +510,10 @@ if __name__ == '__main__':
     while True:
         try:
             main()
-            print('Ожидание 10 мин (стопы каждые 2.5 мин)...')
-            for i in range(4):
-                time.sleep(150)  # 2.5 мин
-                # Проверка команды каждые 2.5 мин
+            print('Ожидание 10 мин (read_command каждые 30 сек)...')
+            for i in range(20):  # 20 × 30 = 600 сек = 10 мин
+                time.sleep(30)
+                # Проверка команды каждые 30 сек
                 cmd = read_command()
                 if cmd == 'PAUSE':
                     state = get_state(); state['paused'] = True; set_state(state)
