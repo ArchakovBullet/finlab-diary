@@ -5121,7 +5121,7 @@ elif page == "📊 Торговые роботы":
                 st.button("🛑 Стоп", type="secondary", use_container_width=True,
                           key="alg_stop_disabled", disabled=True)
 
-        st.caption("⚠️ PAUSE/STOP применяются в следующем цикле робота (до 2.5 мин).")
+        st.caption("⚠️ PAUSE/STOP применяются в течение 30 сек.")
 
         # Показать «команда в очереди»
         if _alg_cmd_path.exists():
