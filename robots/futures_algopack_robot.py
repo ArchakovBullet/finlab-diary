@@ -241,10 +241,16 @@ def get_last_tradedate(ticker):
         return None
 
 
+# Вечные фьючерсы (нет экспирации, не закрываем по EXPIRY)
+PERPETUAL_TICKERS = {
+    'EURRUBF', 'USDRUBF', 'CNYRUBF', 'GLDRUBF',  # валютные/золото
+    'SBERF', 'GAZPF', 'IMOEXF',                   # фондовые/индексные
+}
+
+
 def is_perpetual(ticker):
-    """Вечный фьючерс — нет LASTTRADEDATE в кеше."""
-    last = get_last_tradedate(ticker)
-    return last is None
+    """Вечный фьючерс — по явному списку."""
+    return ticker in PERPETUAL_TICKERS
 
 
 def is_expiring_soon(ticker, days=2):
