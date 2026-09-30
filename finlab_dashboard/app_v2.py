@@ -4231,8 +4231,8 @@ elif page == "📊 Торговые роботы":
                     _df = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="CLOSED"', _conn)
                     _all_trades += len(_df)
                     _all_wins += len(_df[_df['pnl'] > 0])
-                else:
-                    _df = pd.read_sql_query('SELECT * FROM futures_positions WHERE status="CLOSED"', _conn)
+                elif 'futures_algopack' in str(s['db']):
+                    _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
                     _all_trades += len(_df)
                     _all_wins += len(_df[_df['pnl'] > 0])
                 _conn.close()
@@ -4258,8 +4258,8 @@ elif page == "📊 Торговые роботы":
                 _df = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="CLOSED"', _conn)
                 _df['exit_time'] = pd.to_datetime(_df['exit_time'])
                 _all_closed_dfs.append(_df[['exit_time', 'pnl']])
-            else:
-                _df = pd.read_sql_query('SELECT * FROM futures_positions WHERE status="CLOSED"', _conn)
+            elif 'futures_algopack' in str(s['db']):
+                _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
                 _df['exit_time'] = pd.to_datetime(_df['exit_time'])
                 _all_closed_dfs.append(_df[['exit_time', 'pnl']])
             _conn.close()
