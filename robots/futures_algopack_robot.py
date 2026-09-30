@@ -499,13 +499,17 @@ def main():
 
 if __name__ == '__main__':
     import signal as _signal
+
     def _on_sigterm(signum, frame):
-        # SIGTERM (systemctl restart/stop) — НЕ закрываем позиции.
-        # Для закрытия — команда STOP через command.txt.
         print(f'\n📥 Получен SIGTERM — завершение без закрытия позиций')
         raise SystemExit(0)
+
+    def _on_sigusr1(signum, frame):
+        print(f'\n📥 Получен SIGUSR1 — прерывание sleep, читаю команду')
+
     _signal.signal(_signal.SIGTERM, _on_sigterm)
     _signal.signal(_signal.SIGINT, _on_sigterm)
+    _signal.signal(_signal.SIGUSR1, _on_sigusr1)
 
     while True:
         try:
