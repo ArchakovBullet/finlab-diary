@@ -159,11 +159,11 @@ def get_state() -> dict:
 def graceful_shutdown():
     """Graceful shutdown: закрыть все открытые позиции по рынку, VK, exit."""
     print('\n🛑 GRACEFUL SHUTDOWN')
-    send_vk_message('🛑 ALGOPACK: graceful shutdown, закрываю позиции...')
+    send_vk_message('🛑Робот_фьючерсов: graceful shutdown, закрываю позиции...')
     open_positions = get_open_positions()
     if not open_positions:
         print('Нет открытых позиций')
-        send_vk_message('🛑 ALGOPACK: shutdown завершён (позиций не было)')
+        send_vk_message('🛑Робот_фьючерсов: shutdown завершён (позиций не было)')
         return
     closed = 0
     for pos in open_positions:
@@ -182,7 +182,7 @@ def graceful_shutdown():
         except Exception as e:
             print(f'  ❌ {ticker}: {e}')
     print(f'✅ Закрыто: {closed}')
-    send_vk_message(f'🛑 ALGOPACK: shutdown завершён, закрыто {closed}')
+    send_vk_message(f'🛑Робот_фьючерсов: shutdown завершён, закрыто {closed}')
 
 
 def get_open_positions():
@@ -269,7 +269,7 @@ def open_position(ticker, direction, signal_data, price, atr):
     conn.close()
 
     emoji = '🟢' if direction == 'LONG' else '🔴'
-    message = f"🤖 ALGOPACK: {emoji} {direction} {ticker}: score={signal_data.get('score')}, price={price:.4f}, stop={stop_price:.4f}"
+    message = f"🤖Робот_фьючерсов: {emoji} {direction} {ticker}: score={signal_data.get('score')}, price={price:.4f}, stop={stop_price:.4f}"
     send_vk_message(message)
     print(f"✅ {message}")
 
@@ -310,7 +310,7 @@ def close_position(position_id, ticker, direction, exit_price, reason, entry_pri
 
     emoji = '🟢' if pnl > 0 else '🔴'
     lqdt_str = f", LQDT={lqdt_diff:+.2f}%" if lqdt_diff is not None else ""
-    message = f"🤖 ALGOPACK: ЗАКРЫТИЕ {ticker}: PnL={pnl:+.2f}₽ ({reason}){lqdt_str} {emoji}"
+    message = f"🤖Робот_фьючерсов: ЗАКРЫТИЕ {ticker}: PnL={pnl:+.2f}₽ ({reason}){lqdt_str} {emoji}"
     send_vk_message(message)
     print(f"✅ {message}")
 
@@ -431,7 +431,7 @@ def main():
         state['paused'] = True
         set_state(state)
         print('⏸️ PAUSED — новые позиции не открываются')
-        send_vk_message('⏸️ ALGOPACK: пауза')
+        send_vk_message('⏸️Робот_фьючерсов: пауза')
     elif cmd == 'STOP':
         state['paused'] = False
         set_state(state)
@@ -442,7 +442,7 @@ def main():
         state['paused'] = False
         set_state(state)
         print('▶️ RESUMED')
-        send_vk_message('▶️ ALGOPACK: возобновление')
+        send_vk_message('▶️Робот_фьючерсов: возобновление')
 
     if not is_moex_trading_day():
         print('⏸️ Неторговый день — только стопы')
@@ -533,7 +533,7 @@ if __name__ == '__main__':
                 if cmd == 'PAUSE':
                     state = get_state(); state['paused'] = True; set_state(state)
                     print('⏸️ PAUSED')
-                    send_vk_message('⏸️ ALGOPACK: пауза')
+                    send_vk_message('⏸️Робот_фьючерсов: пауза')
                     break
                 elif cmd == 'STOP':
                     state = get_state(); state['paused'] = False; set_state(state)

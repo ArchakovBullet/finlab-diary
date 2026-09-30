@@ -4140,7 +4140,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов (Algopack)"],
+        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -5037,8 +5037,8 @@ elif page == "📊 Торговые роботы":
         else:
             st.info("БД робота фьючерсов не найдена")
 
-    elif robot_tab == "📊 Робот фьючерсов (Algopack)":
-        st.subheader("📊 Робот фьючерсов (Algopack)")
+    elif robot_tab == "📊 Робот фьючерсов":
+        st.subheader("📊 Робот фьючерсов")
         st.info("Сигналы TradeStats + FutOI | Бумажный режим | Горизонт 5 дней")
 
         import subprocess
