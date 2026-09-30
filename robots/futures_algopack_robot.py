@@ -31,6 +31,8 @@ from Utils.lqdt_benchmark import compare_to_lqdt, beat_lqdt_rate
 ROOT = Path('/root/finlab')
 DATA_ROOT = ROOT / 'data'
 DB_PATH = ROOT / 'robots' / 'futures_algopack_robot.db'
+COMMAND_FILE = ROOT / 'robots' / 'futures_algopack_robot_command.txt'
+STATE_FILE = ROOT / 'robots' / 'futures_algopack_robot_state.json'
 
 load_dotenv(ROOT / '.env')
 VK_TOKEN = os.getenv('VK_TOKEN', '')
@@ -118,6 +120,69 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_status ON algopack_positions(status)')
     conn.commit()
     conn.close()
+
+
+def read_command():
+    """Прочитать команду из файла. Возвращает 'PAUSE' / 'STOP' / 'RESUME' / None."""
+    if not COMMAND_FILE.exists():
+        return None
+    try:
+        cmd = COMMAND_FILE.read_text().strip().upper()
+        if not cmd:
+            return None
+        COMMAND_FILE.write_text('')
+        print(f'📥 Команда: {cmd}')
+        return cmd
+    except Exception as e:
+        print(f'⚠️ read_command: {e}')
+        return None
+
+
+def set_state(state: dict):
+    """Сохранить состояние робота."""
+    try:
+        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False))
+    except Exception as e:
+        print(f'⚠️ set_state: {e}')
+
+
+def get_state() -> dict:
+    """Прочитать состояние робота."""
+    if not STATE_FILE.exists():
+        return {'paused': False}
+    try:
+        return json.loads(STATE_FILE.read_text())
+    except Exception:
+        return {'paused': False}
+
+
+def graceful_shutdown():
+    """Graceful shutdown: закрыть все открытые позиции по рынку, VK, exit."""
+    print('\n🛑 GRACEFUL SHUTDOWN')
+    send_vk_message('🛑 ALGOPACK: graceful shutdown, закрываю позиции...')
+    open_positions = get_open_positions()
+    if not open_positions:
+        print('Нет открытых позиций')
+        send_vk_message('🛑 ALGOPACK: shutdown завершён (позиций не было)')
+        return
+    closed = 0
+    for pos in open_positions:
+        pos_id = pos[0]; ticker = pos[1]; direction = pos[2]
+        entry_price = pos[4]
+        m10_file = DATA_ROOT / 'candles' / f'{ticker}_M10.parquet'
+        if not m10_file.exists():
+            continue
+        try:
+            df = pd.read_parquet(m10_file)
+            if len(df) == 0:
+                continue
+            price = float(df['close'].iloc[-1])
+            close_position(pos_id, ticker, direction, price, 'SHUTDOWN', entry_price, 1.0)
+            closed += 1
+        except Exception as e:
+            print(f'  ❌ {ticker}: {e}')
+    print(f'✅ Закрыто: {closed}')
+    send_vk_message(f'🛑 ALGOPACK: shutdown завершён, закрыто {closed}')
 
 
 def get_open_positions():
@@ -408,6 +473,14 @@ def main():
 
 
 if __name__ == '__main__':
+    import signal as _signal
+    def _on_sigterm(signum, frame):
+        print(f'\n📥 Получен SIGTERM')
+        graceful_shutdown()
+        raise SystemExit(0)
+    _signal.signal(_signal.SIGTERM, _on_sigterm)
+    _signal.signal(_signal.SIGINT, _on_sigterm)
+
     while True:
         try:
             main()
@@ -416,8 +489,11 @@ if __name__ == '__main__':
                 time.sleep(STOP_CHECK_INTERVAL)
                 check_stops_only()
                 print(f'  [{i+1}/6] Стопы проверены')
+        except SystemExit:
+            raise
         except KeyboardInterrupt:
             print('🛑 Остановлено')
+            graceful_shutdown()
             break
         except Exception as e:
             print(f'❌ Ошибка: {e}')
