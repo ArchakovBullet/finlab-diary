@@ -497,6 +497,10 @@ def main():
     print("\n✅ Проверка завершена")
 
 
+INTERRUPT = False
+
+INTERRUPT = False
+
 if __name__ == '__main__':
     import signal as _signal
 
@@ -505,6 +509,8 @@ if __name__ == '__main__':
         raise SystemExit(0)
 
     def _on_sigusr1(signum, frame):
+        global INTERRUPT
+        INTERRUPT = True
         print(f'\n📥 Получен SIGUSR1 — прерывание sleep, читаю команду')
 
     _signal.signal(_signal.SIGTERM, _on_sigterm)
@@ -516,8 +522,13 @@ if __name__ == '__main__':
             main()
             print('Ожидание 10 мин (read_command каждые 30 сек)...')
             for i in range(20):  # 20 × 30 = 600 сек = 10 мин
-                time.sleep(30)
-                # Проверка команды каждые 30 сек
+                # sleep 30 сек, но прерывается SIGUSR1 (INTERRUPT)
+                INTERRUPT = False
+                for _s in range(30):
+                    if INTERRUPT:
+                        break
+                    time.sleep(1)
+                # Проверка команды каждые 30 сек (или сразу после SIGUSR1)
                 cmd = read_command()
                 if cmd == 'PAUSE':
                     state = get_state(); state['paused'] = True; set_state(state)
