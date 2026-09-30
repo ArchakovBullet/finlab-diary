@@ -3122,3 +3122,58 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - Дашборд «команда в очереди» (патч).
 - LQDT-фикс (для коротких периодов).
 - HI2 + TradeStats (P3).
+
+## 30.09.2026 (среда) — futures_algopack_robot: P1+P2+SIGUSR1+PERPETUAL
+
+### Что сделано
+- futures_algopack_robot.py: запущен в прод (unmask, enable, start).
+- PnL с point_value (фьючерсы).
+- SCORE_MIN=3, MAX_POSITIONS=15.
+- read_command (PAUSE/STOP/RESUME) через futures_algopack_robot_command.txt.
+- graceful_shutdown — закрытие позиций + VK.
+- SIGTERM — НЕ закрывает позиции (при restart позиции сохраняются).
+- SIGUSR1 — мгновенное прерывание sleep для read_command.
+- INTERRUPT + sleep(1)-цикл — SIGUSR1 работает за миллисекунды.
+- CHECK_INTERVAL=600, read_command каждые 30 сек.
+- Unit: PYTHONUNBUFFERED=1, KillSignal=SIGTERM, TimeoutStopSec=30.
+
+### P1+P2 — проверки из futures_robot.py (перенос)
+- is_moex_trading_day — полный, с праздниками.
+- is_trading_time — 10:00-18:00 МСК.
+- is_tradestats_fresh — свежесть TradeStats (24ч).
+- is_futoi_fresh — свежесть FutOI (24ч).
+- check_expiry — закрытие срочных за 2 дня до экспирации.
+- is_expiring_soon — блокировка входа за 2 дня.
+- load_stop_config / get_stop_mult / get_be_move — индивидуальные стопы.
+- PERPETUAL_TICKERS = 7: EURRUBF, USDRUBF, CNYRUBF, GLDRUBF, SBERF, GAZPF, IMOEXF.
+- is_perpetual — по явному списку (не по кешу).
+- check_stops_only — get_be_move(ticker) вместо фиксированного BE_MOVE_ATR.
+
+### Дашборд
+- Таб "📊 Робот фьючерсов" (бывший "Робот фьючерсов (Algopack)").
+- Кнопки Пауза/Старт/Стоп — мгновенные (SIGUSR1).
+- Метрики: PnL, WR, Sharpe, beat LQDT.
+- Старый futures_robot.db удалён.
+- Старый таб "📉 Робот фьючерсов" — убран из robot_tabs (блок не тронут).
+
+### VK
+- Переименование: "🤖 ALGOPACK:" → "🤖Робот_фьючерсов:".
+
+### Тесты
+- PAUSE: мгновенно (≤2 сек), state.json={"paused":true}.
+- RESUME: мгновенно, state.json={"paused":false}.
+- STOP: мгновенно, graceful_shutdown, закрыто 10 позиций, exit (status=0).
+- SIGTERM при restart: позиции сохраняются.
+- is_expiring_soon: BR (LASTTRADEDATE=2026-10-01) → True (закрытие 01.10).
+
+### Что не сделано
+- tradestats_stocks_robot.py (10 акций).
+- Дашборд: убрать Сводку, Риск-менеджмент, пустой старт, Обзор 3 робота.
+- P3: GARCH-фильтр.
+- HI2 + TradeStats (P3).
+
+### Урок
+- SIGUSR1 для мгновенной реакции: handler + INTERRUPT + sleep(1)-цикл.
+- Python 3.5+ time.sleep НЕ прерывается сигналом (PEP 475) — нужен ручной цикл.
+- Вечные фьючерсы (7) — отдельный список, не по кешу.
+- У срочных — LASTTRADEDATE из contract_cache.json.
