@@ -5095,6 +5095,31 @@ elif page == "📊 Торговые роботы":
         # Кнопки управления — через command.txt
         col_a1, col_a2, col_a3 = st.columns(3)
 
+        # Получить PID робота (для SIGUSR1)
+        _alg_pid = None
+        try:
+            _r_pid = subprocess.run(
+                ['systemctl', 'show', '-p', 'MainPID', '--value', 'finlab-futures-algopack'],
+                capture_output=True, text=True
+            )
+            _pid_str = _r_pid.stdout.strip()
+            if _pid_str and _pid_str != '0':
+                _alg_pid = int(_pid_str)
+        except Exception:
+            pass
+
+        def _send_cmd(cmd: str):
+            """Записать команду в файл + SIGUSR1 для мгновенного чтения."""
+            try:
+                _alg_cmd_path.write_text(cmd)
+            except Exception:
+                pass
+            if _alg_pid:
+                try:
+                    subprocess.run(['kill', '-SIGUSR1', str(_alg_pid)], capture_output=True)
+                except Exception:
+                    pass
+
         with col_a1:
             if _alg_running and not _alg_paused:
                 st.button("▶️ Старт", type="primary", use_container_width=True,
@@ -5104,14 +5129,15 @@ elif page == "📊 Торговые роботы":
                     if not _alg_running:
                         subprocess.run(['systemctl', 'start', 'finlab-futures-algopack'], capture_output=True)
                     else:
-                        _alg_cmd_path.write_text('RESUME')
+                        _send_cmd('RESUME')
+                    st.success("▶️ Старт отправлен")
                     st.rerun()
 
         with col_a2:
             if _alg_running and not _alg_paused:
                 if st.button("⏸️ Пауза", type="secondary", use_container_width=True, key="alg_pause"):
-                    _alg_cmd_path.write_text('PAUSE')
-                    st.warning("Команда PAUSE отправлена. Робот проверит в следующем цикле (до 1 часа).")
+                    _send_cmd('PAUSE')
+                    st.warning("⏸️ Пауза отправлена — робот реагирует мгновенно")
                     st.rerun()
             else:
                 st.button("⏸️ Пауза", type="secondary", use_container_width=True,
@@ -5120,20 +5146,14 @@ elif page == "📊 Торговые роботы":
         with col_a3:
             if _alg_running:
                 if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="alg_stop"):
-                    _alg_cmd_path.write_text('STOP')
-                    st.error("Команда STOP отправлена. Робот закроет позиции и завершится.")
+                    _send_cmd('STOP')
+                    st.error("🛑 Стоп отправлен — робот закрывает позиции")
                     st.rerun()
             else:
                 st.button("🛑 Стоп", type="secondary", use_container_width=True,
                           key="alg_stop_disabled", disabled=True)
 
-        st.caption("⚠️ PAUSE/STOP применяются в течение 30 сек.")
-
-        # Показать «команда в очереди»
-        if _alg_cmd_path.exists():
-            _cmd_content = _alg_cmd_path.read_text().strip()
-            if _cmd_content:
-                st.warning(f"⚠️ В очереди команда: `{_cmd_content}`. Применится в следующем цикле (≤2.5 мин).")
+        st.caption("✅ Кнопки мгновенные (SIGUSR1). Стоп закрывает позиции в течение нескольких секунд.")
 
         # Открытые позиции
         if _alg_open_df is not None and len(_alg_open_df) > 0:
