@@ -3092,3 +3092,33 @@ Continue AI проанализировал futures_robot.py и нашёл 8 за
 - futures_algopack_robot.db больше не показывается в git status.
 - Старые БД (pairs, futures, stocks, baseline) не отслеживались git и не затронуты.
 - Коммит: 4092345.
+
+## 30.09.2026 (среда) — futures_algopack_robot в проде + дашборд
+
+### Что сделано
+- futures_algopack_robot.py: запущен (unmask, enable, start).
+- PnL с point_value (фьючерсы), cooldown 8ч.
+- SCORE_MIN=3 (было 2), MAX_POSITIONS=15 (было 10).
+- read_command (PAUSE/STOP/RESUME) через futures_algopack_robot_command.txt.
+- graceful_shutdown (закрытие позиций, VK).
+- SIGTERM — НЕ закрывает позиции (позиции сохраняются при restart).
+- CHECK_INTERVAL=600 (10 мин), read_command каждые 2.5 мин.
+- Unit: PYTHONUNBUFFERED=1, KillSignal=SIGTERM, TimeoutStopSec=30.
+- Дашборд: таб "📊 Робот фьючерсов (Algopack)" — 13 OPEN / 30 CLOSED, PnL, WR, Sharpe, beat LQDT.
+
+### Тесты
+- PAUSE: робот на паузе, стопы проверяет, новые не открывает. state.json={"paused":true}.
+- RESUME: робот возобновил, открыл 10 позиций.
+- STOP: graceful shutdown, закрыл 10 позиций, exit.
+- SIGTERM при restart: позиции сохраняются (не закрываются).
+
+### Проблемы / выводы
+- При первом тесте Пауза "не реагировала" — робот спал 1 час. Фикс: CHECK_INTERVAL=600, read_command каждые 2.5 мин.
+- LQDT-diff = -0.04% для всех — период удержания минуты, fallback LQDT.
+- 30 закрытых сделок — от тестов (многократный restart/stop). Реальных — 0.
+
+### Что не сделано
+- tradestats_stocks_robot.py (10 акций).
+- Дашборд «команда в очереди» (патч).
+- LQDT-фикс (для коротких периодов).
+- HI2 + TradeStats (P3).
