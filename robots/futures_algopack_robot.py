@@ -424,8 +424,33 @@ def main():
 
     init_db()
 
+    # ===== Проверка команд (PAUSE/STOP/RESUME) =====
+    cmd = read_command()
+    state = get_state()
+    if cmd == 'PAUSE':
+        state['paused'] = True
+        set_state(state)
+        print('⏸️ PAUSED — новые позиции не открываются')
+        send_vk_message('⏸️ ALGOPACK: пауза')
+    elif cmd == 'STOP':
+        state['paused'] = False
+        set_state(state)
+        print('🛑 STOP — graceful shutdown')
+        graceful_shutdown()
+        raise SystemExit(0)
+    elif cmd == 'RESUME':
+        state['paused'] = False
+        set_state(state)
+        print('▶️ RESUMED')
+        send_vk_message('▶️ ALGOPACK: возобновление')
+
     if not is_moex_trading_day():
         print('⏸️ Неторговый день — только стопы')
+        check_stops_only()
+        return
+
+    if state.get('paused'):
+        print('⏸️ На паузе — только проверка стопов')
         check_stops_only()
         return
 
