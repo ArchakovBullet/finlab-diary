@@ -73,9 +73,13 @@ def check_contract_changes():
     changes = []
     for ticker, data in current.items():
         if ticker not in previous:
+            log_contract_change(ticker, None, data.get('code'))
             changes.append(f"🆕 {ticker}: новый контракт {data.get('code', 'N/A')}")
         elif previous[ticker].get('code') != data.get('code'):
-            changes.append(f"🔄 {ticker}: {previous[ticker].get('code', 'N/A')} → {data.get('code', 'N/A')}")
+            _old_code = previous[ticker].get('code', 'N/A')
+            _new_code = data.get('code', 'N/A')
+            log_contract_change(ticker, _old_code, _new_code)
+            changes.append(f"🔄 {ticker}: {_old_code} → {_new_code}")
     
     save_state(current)
     
