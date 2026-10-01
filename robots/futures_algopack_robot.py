@@ -90,6 +90,7 @@ def get_be_move(ticker):
 MAX_POSITIONS = 15  # было 10
 STOP_ATR_MULT = 3.2
 BE_MOVE_ATR = 1.5
+BE_ENABLED = False  # Временно отключено 01.10.2026 — проверяем точку входа
 BE_TARGET_MULT = 1.002
 BE_EPS = 0.002
 COOLDOWN_HOURS = 8  # как в futures_robot.py (whipsaw protection)
@@ -251,6 +252,25 @@ PERPETUAL_TICKERS = {
 def is_perpetual(ticker):
     """Вечный фьючерс — по явному списку."""
     return ticker in PERPETUAL_TICKERS
+
+
+CONTRACT_CHANGE_LOG_PATH = ROOT / 'logs' / 'contract_change_log.json'
+
+
+def is_new_contract(ticker, days=3):
+    """Новый контракт доступен для входа только через N дней после смены."""
+    if not CONTRACT_CHANGE_LOG_PATH.exists():
+        return False
+    try:
+        log = json.loads(CONTRACT_CHANGE_LOG_PATH.read_text())
+        entry = log.get(ticker)
+        if not entry:
+            return False
+        changed_at = datetime.strptime(entry['changed_at'], '%Y-%m-%d')
+        return (datetime.now() - changed_at).days < days
+    except Exception as e:
+        print(f"  ⚠️ {ticker}: ошибка is_new_contract: {e}")
+        return False
 
 
 def is_expiring_soon(ticker, days=2):
@@ -554,21 +574,22 @@ def check_stops_only():
 
             # Безубыток
             _be_target = entry_price * BE_TARGET_MULT
-            _be_move = get_be_move(ticker)
-            if direction == 'LONG':
-                if high >= entry_price + entry_atr * _be_move:
-                    if stop_price < _be_target:
-                        stop_price = _be_target
-                        cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
-                        conn.commit()
-                        print(f'🔒 {ticker}: стоп в BE+комиссия ({stop_price:.4f})')
-            else:  # SHORT
-                if low <= entry_price - entry_atr * _be_move:
-                    if stop_price > _be_target:
-                        stop_price = _be_target
-                        cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
-                        conn.commit()
-                        print(f'🔒 {ticker}: стоп в BE+комиссия ({stop_price:.4f})')
+            if BE_ENABLED:
+                _be_move = get_be_move(ticker)
+                if direction == 'LONG':
+                    if high >= entry_price + entry_atr * _be_move:
+                        if stop_price < _be_target:
+                            stop_price = _be_target
+                            cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
+                            conn.commit()
+                            print(f'🔒 {ticker}: стоп в BE+комиссия ({stop_price:.4f})')
+                else:  # SHORT
+                    if low <= entry_price - entry_atr * _be_move:
+                        if stop_price > _be_target:
+                            stop_price = _be_target
+                            cursor.execute('UPDATE algopack_positions SET stop_price = ? WHERE id = ?', (stop_price, pos_id))
+                            conn.commit()
+                            print(f'🔒 {ticker}: стоп в BE+комиссия ({stop_price:.4f})')
 
             # Срабатывание стопа
             if direction == 'LONG' and low <= stop_price:
@@ -670,6 +691,9 @@ def main():
             continue
         if is_expiring_soon(ticker, days=2):
             print(f'  ⏰ {ticker}: экспирация ≤2 дн. — пропуск')
+            continue
+        if is_new_contract(ticker, days=3):
+            print(f'  ⏰ {ticker}: новый контракт <3 дн. — пропуск')
             continue
         _ts_fresh, _ts_age = is_tradestats_fresh(ticker)
         if not _ts_fresh:

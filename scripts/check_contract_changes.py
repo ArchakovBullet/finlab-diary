@@ -38,6 +38,27 @@ def save_state(state):
     with open(STATE_FILE, 'w') as f:
         json.dump(state, f, indent=2, default=str)
 
+
+CHANGE_LOG_FILE = Path("/root/finlab/logs/contract_change_log.json")
+
+
+def log_contract_change(ticker, old_code, new_code):
+    """Записать смену контракта в лог."""
+    log = {}
+    if CHANGE_LOG_FILE.exists():
+        try:
+            with open(CHANGE_LOG_FILE, 'r') as f:
+                log = json.load(f)
+        except Exception:
+            log = {}
+    log[ticker] = {
+        'old': old_code,
+        'new': new_code,
+        'changed_at': datetime.now().strftime('%Y-%m-%d'),
+    }
+    with open(CHANGE_LOG_FILE, 'w') as f:
+        json.dump(log, f, indent=2, ensure_ascii=False)
+
 def check_contract_changes():
     """Проверить изменения контрактов и отправить уведомление"""
     current = load_cache()
