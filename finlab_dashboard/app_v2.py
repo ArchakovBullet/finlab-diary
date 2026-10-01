@@ -780,7 +780,7 @@ def calculate_signals(df, df_d1=None, df_ts=None, atr_info=None, hi2_info=None):
                 risk_percent=2.0
             )
             lines.append(f"- Стоп-лосс: {risk['stop_loss']:.2f} (+{risk['risk_per_unit']:.2f})")
-            lines.append(f"- Риск на сделку: {risk['max_risk_rub']:,.0f} ₽ ({risk['max_risk_pct']}% от депозита)")
+            lines.append(f"- Риск на сделку: {risk['max_risk_rub']:,.0f} ₽ ({risk['maxRISK_PCT']}% от депозита)")
             lines.append(f"- Размер позиции: {risk['position_size']} контрактов")
             lines.append(f"- Выход: по противоположному сигналу (LONG)")
         except Exception as e:
@@ -1073,6 +1073,10 @@ sector_stats["last_log_name"] = sector_log
 sector_stats["errors_count"], sector_stats["errors_log"] = get_cron_errors("sector_indices")
 collectors_info["Сектора"] = sector_stats
 # ========== НАСТРОЙКИ СТРАНИЦЫ ==========
+# ========== КОНСТАНТЫ ==========
+DEPOSIT = 100000       # Депозит для расчёта доходности (был UI)
+RISK_PCT = 1.0         # Риск на сделку, % (был UI)
+
 st.set_page_config(page_title="FinLabPy Terminal", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
 # === АВТООБНОВЛЕНИЕ СТРАНИЦЫ (каждые 4 часа) ===
@@ -1111,31 +1115,7 @@ st.sidebar.title("🚀 FinLabPy Terminal")
 st.sidebar.markdown('<style>[data-testid="stSidebar"] .stMarkdown { margin-bottom: -35px; } [data-testid="stSidebar"] .stMetric { margin-top: -35px; }</style>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 st.sidebar.markdown("---")
-st.sidebar.subheader("💰 Риск-менеджмент")
-_deposit = st.sidebar.number_input("Депозит (₽)", min_value=10000, value=100000, step=10000, format="%d")
-_risk_pct = st.sidebar.slider("Риск на сделку (%)", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
-
-with st.sidebar.expander("ℹ️ Как это работает?"):
-    st.markdown("""
-**Калькулятор позиции** рассчитывает количество контрактов на основе:
-- **Депозита** — ваш торговый капитал
-- **Риска на сделку (%)** — максимальный убыток в % от депозита
-- **Расстояния до стоп-лосса** — разница между ценой входа и стопом
-
-**Формула:**
-`Риск в рублях = Депозит × Риск% / 100`
-`Контрактов = Риск в рублях / (Расстояние до стопа × Лот)`
-
-**Пример:**
-- Депозит: 100 000 ₽, Риск: 1% → Риск = 1 000 ₽
-- Вход: 113.52, Стоп: 112.65 → Расстояние = 0.87
-- Лот GAZPF = 10 → Риск на контракт = 8.7 ₽
-- Позиция = 1 000 / 8.7 = 114 контрактов
-
-**Лоты:**
-- CNYRUBF, USDRUBF, EURRUBF = 1000
-- Остальные = 10
-    """)
+# DEPOSIT и RISK_PCT — константы (см. начало файла)
 
 st.sidebar.markdown("---")
 
@@ -1875,7 +1855,7 @@ elif page == "FutOI":
             
             # Калькулятор позиции (всегда показываем, если есть сигнал)
             if _uni['decision'] != "WAIT" and _uni['entry_price'] and _uni['stop_loss']:
-                _risk_rub = _deposit * _risk_pct / 100
+                _risk_rub = DEPOSIT * RISK_PCT / 100
                 _risk_per_contract = abs(_uni['entry_price'] - _uni['stop_loss']) * 10  # лот уточняется
                 
                 # Уточняем лот для тикера
@@ -1885,7 +1865,7 @@ elif page == "FutOI":
                 if _risk_per_contract > 0:
                     _position_size = int(_risk_rub / _risk_per_contract)
                     if _position_size > 0:
-                        st.success(f"💰 Калькулятор позиции: **{_position_size}** контрактов (риск {_risk_rub:,.0f} ₽ = {_risk_pct}% от {_deposit:,.0f} ₽)".replace(",", " "))
+                        st.success(f"💰 Калькулятор позиции: **{_position_size}** контрактов (риск {_risk_rub:,.0f} ₽ = {RISK_PCT}% от {DEPOSIT:,.0f} ₽)".replace(",", " "))
                     else:
                         st.warning(f"⚠️ Риск {_risk_rub:,.0f} ₽ меньше стоимости 1 контракта. Увеличьте депозит или риск.")
                 else:
@@ -1908,8 +1888,8 @@ elif page == "FutOI":
                             'stop_loss': _uni['stop_loss'],
                             'target': _uni['target'],
                             'position_size': _position_size if '_position_size' in dir() else 0,
-                            'deposit': _deposit,
-                            'risk_pct': _risk_pct,
+                            'deposit': DEPOSIT,
+                            'risk_pct': RISK_PCT,
                             'confidence': _uni['confidence'],
                             'reason': _uni['reason'],
                             'note': _journal_note if '_journal_note' in dir() else '',
@@ -2145,7 +2125,7 @@ elif page == "FutOI":
             if df_d1 is not None and len(df_d1) > 0:
                 last_close = df_d1['close'].iloc[-1]
                 atr_val = atr_info['atr'] if atr_info else None
-                risk = calculate_risk(selected_ticker, last_close, atr=atr_val, deposit=_deposit)
+                risk = calculate_risk(selected_ticker, last_close, atr=atr_val, deposit=DEPOSIT)
                 
                 with st.expander("💰 Параметры инструмента (ГО)", expanded=False):
                     col_r1, col_r2 = st.columns(2)
@@ -3276,17 +3256,17 @@ elif page == "FUTOI_1H":
 #             _total_mod = _factors.get('total_mod', 0)
 #             _score = scanner['score']
 #             if _score >= 70:
-#                 _risk_pct = max(25, 100 + _total_mod * 2)
+#                 RISK_PCT = max(25, 100 + _total_mod * 2)
 #                 _risk_level = "🟢 ПОНИЖЕННЫЙ РИСК"
-#                 _risk_action = f"Можно входить. Рекомендуемая позиция: {_risk_pct:.0f}% от стандартной."
+#                 _risk_action = f"Можно входить. Рекомендуемая позиция: {RISK_PCT:.0f}% от стандартной."
 #             elif _score >= 50:
-#                 _risk_pct = max(15, 75 + _total_mod * 2)
+#                 RISK_PCT = max(15, 75 + _total_mod * 2)
 #                 _risk_level = "🟡 СРЕДНИЙ РИСК"
-#                 _risk_action = f"Входить осторожно. Позиция: {_risk_pct:.0f}% от стандартной."
+#                 _risk_action = f"Входить осторожно. Позиция: {RISK_PCT:.0f}% от стандартной."
 #             else:
-#                 _risk_pct = max(5, 50 + _total_mod * 2)
+#                 RISK_PCT = max(5, 50 + _total_mod * 2)
 #                 _risk_level = "🔴 ПОВЫШЕННЫЙ РИСК"
-#                 _risk_action = f"Лучше воздержаться. Максимальная позиция: {_risk_pct:.0f}%."
+#                 _risk_action = f"Лучше воздержаться. Максимальная позиция: {RISK_PCT:.0f}%."
             
 #             st.caption(f"{_risk_level}: {_risk_action}")
             
@@ -3521,7 +3501,7 @@ elif page == "FUTOI_1H":
 #             if df_d1 is not None:
 #                 _close = df_d1['close'].iloc[-1]
 #                 _atr = atr_info['atr'] if atr_info else (_close * 0.01)
-#                 _risk = calculate_risk(selected_ticker, _close, atr=_atr, deposit=_deposit)
+#                 _risk = calculate_risk(selected_ticker, _close, atr=_atr, deposit=DEPOSIT)
 #                 st.markdown("---")
 #                 st.subheader("💰 Риск-менеджмент")
 #                 col_rm1, col_rm2 = st.columns(2)
@@ -3609,13 +3589,13 @@ elif page == "FUTOI_1H":
 #                     _pot = abs(_target - _entry) / _entry * 100 if _entry > 0 else 0
 #                     st.metric("Цель", f"{_target:.2f}", delta=f"+{_pot:.1f}%" if _pot > 0 else None)
                 
-#                 _risk_rub = _deposit * _risk_pct / 100
+#                 _risk_rub = DEPOSIT * RISK_PCT / 100
 #                 _lot = 1000 if selected_ticker in ['CNYRUBF', 'USDRUBF', 'EURRUBF'] else 10
 #                 _risk_per_contract = abs(_entry - _stop) * _lot
 #                 if _risk_per_contract > 0:
 #                     _position_size = int(_risk_rub / _risk_per_contract)
 #                     if _position_size > 0:
-#                         st.success(f"💰 Позиция: **{_position_size}** контрактов (риск {_risk_rub:,.0f} ₽ = {_risk_pct}% от {_deposit:,.0f} ₽)".replace(",", " "))
+#                         st.success(f"💰 Позиция: **{_position_size}** контрактов (риск {_risk_rub:,.0f} ₽ = {RISK_PCT}% от {DEPOSIT:,.0f} ₽)".replace(",", " "))
                 
 #                 with st.expander("🔒 Трейлинг-стоп", expanded=False):
 #                     _trail_activate = _entry + 2*_atr_val if scanner['decision'] == 'LONG' else _entry - 2*_atr_val
@@ -4434,7 +4414,7 @@ elif page == "📊 Торговые роботы":
         st.subheader("⚙️ Настройки")
         col_a, col_b, col_c = st.columns(3)
         with col_a:
-            st.number_input("Депозит (₽)", value=100_000, step=10_000, key="robot_deposit")
+            st.number_input("Депозит (₽)", value=100_000, step=10_000, key="robotDEPOSIT")
         with col_b:
             st.selectbox("Тип объёма", ["Контракты", "Валюта контракта", "Процент от депозита"], key="robot_volume_type")
         with col_c:
@@ -4553,7 +4533,7 @@ elif page == "📊 Торговые роботы":
                         _lqdt_end_price = _lqdt_period['close'].iloc[-1]
                         _lqdt_return = (_lqdt_end_price - _lqdt_start_price) / _lqdt_start_price * 100
 
-                        _robot_return = _total_pnl / _deposit * 100
+                        _robot_return = _total_pnl / DEPOSIT * 100
                         _diff = _robot_return - _lqdt_return
 
                         col_lqdt1, col_lqdt2, col_lqdt3 = st.columns(3)
@@ -4586,7 +4566,7 @@ elif page == "📊 Торговые роботы":
                         _lqdt_pair = _lqdt_df[(_lqdt_df['begin'] >= _pair_start) & (_lqdt_df['begin'] <= _pair_end)]
                         if len(_lqdt_pair) > 1:
                             _lqdt_pair_return = (_lqdt_pair['close'].iloc[-1] - _lqdt_pair['close'].iloc[0]) / _lqdt_pair['close'].iloc[0] * 100
-                            _pair_robot_return = _pair_pnl / _deposit * 100
+                            _pair_robot_return = _pair_pnl / DEPOSIT * 100
                             _pair_diff = _pair_robot_return - _lqdt_pair_return
 
                             _pair_comparison.append({
@@ -5000,8 +4980,8 @@ elif page == "📊 Торговые роботы":
                         _fut_ex_ri_pnl = _fut_closed_df[_fut_closed_df['ticker'] != 'RI']['pnl'].sum()
                         _fut_ri_pnl = _fut_closed_df[_fut_closed_df['ticker'] == 'RI']['pnl'].sum()
 
-                        _fut_robot_return = _fut_total_pnl / _deposit * 100
-                        _fut_robot_return_ex_ri = _fut_ex_ri_pnl / _deposit * 100
+                        _fut_robot_return = _fut_total_pnl / DEPOSIT * 100
+                        _fut_robot_return_ex_ri = _fut_ex_ri_pnl / DEPOSIT * 100
                         _fut_diff_ex_ri = _fut_robot_return_ex_ri - _lqdt_return
 
                         col_lqdt1, col_lqdt2, col_lqdt3, col_lqdt4 = st.columns(4)
