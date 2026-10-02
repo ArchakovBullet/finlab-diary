@@ -4120,7 +4120,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
+        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -5386,6 +5386,181 @@ elif page == "📊 Торговые роботы":
             st.dataframe(_alg2_disp2.head(100), use_container_width=True, hide_index=True)
         else:
             st.info("Закрытых сделок пока нет (v2)")
+
+    elif robot_tab == "📈 Робот акций (TradeStats)":
+        st.subheader("📈 Робот акций (TradeStats)")
+        st.info("5 сигналов TradeStats | SCORE_MIN=4 | HOLD_DAYS=5 | RVI>=30 | Только LONG")
+
+        import subprocess
+        import sqlite3
+
+        _stk2_db_path = Path('/root/finlab/robots/tradestats_stocks_robot.db')
+        _stk2_cmd_path = Path('/root/finlab/robots/tradestats_stocks_robot_command.txt')
+        _stk2_state_path = Path('/root/finlab/robots/tradestats_stocks_robot_state.json')
+
+        _stk2_result = subprocess.run(['systemctl', 'is-active', 'finlab-stocks-tradestats'],
+                                      capture_output=True, text=True)
+        _stk2_running = _stk2_result.stdout.strip() == 'active'
+
+        _stk2_paused = False
+        if _stk2_state_path.exists():
+            try:
+                import json as _json3
+                _stk2_state = _json3.loads(_stk2_state_path.read_text())
+                _stk2_paused = _stk2_state.get('paused', False)
+            except Exception:
+                pass
+
+        _stk2_open_count = 0
+        _stk2_open_df = None
+        _stk2_closed_df = None
+
+        if _stk2_db_path.exists():
+            try:
+                _conn = sqlite3.connect(_stk2_db_path)
+                _stk2_open_df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="OPEN"', _conn)
+                _stk2_closed_df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
+                _conn.close()
+                _stk2_open_count = len(_stk2_open_df)
+            except Exception as _e:
+                st.error(f"Ошибка чтения БД (TradeStats): {_e}")
+
+        if _stk2_running:
+            if _stk2_paused:
+                st.warning(f"⏸️ Робот акций (TradeStats) на паузе ({_stk2_open_count} откр. позиций)")
+            elif _stk2_open_count > 0:
+                st.success(f"🟢 Робот акций (TradeStats) работает ({_stk2_open_count} откр. позиций)")
+            else:
+                st.success("🟢 Робот акций (TradeStats) работает (нет открытых позиций)")
+        else:
+            if _stk2_open_count > 0:
+                st.warning(f"🟡 Робот акций (TradeStats) остановлен ({_stk2_open_count} откр. позиций)")
+            else:
+                st.error("🔴 Робот акций (TradeStats) остановлен")
+
+        col_s1, col_s2, col_s3 = st.columns(3)
+
+        _stk2_pid = None
+        try:
+            _rs2_pid = subprocess.run(
+                ['systemctl', 'show', '-p', 'MainPID', '--value', 'finlab-stocks-tradestats'],
+                capture_output=True, text=True
+            )
+            _pids2_str = _rs2_pid.stdout.strip()
+            if _pids2_str and _pids2_str != '0':
+                _stk2_pid = int(_pids2_str)
+        except Exception:
+            pass
+
+        def _send_cmd_stk2(cmd: str):
+            try:
+                _stk2_cmd_path.write_text(cmd)
+            except Exception:
+                pass
+            if _stk2_pid:
+                try:
+                    subprocess.run(['kill', '-SIGUSR1', str(_stk2_pid)], capture_output=True)
+                except Exception:
+                    pass
+
+        with col_s1:
+            if _stk2_running and not _stk2_paused:
+                st.button("▶️ Старт", type="primary", use_container_width=True,
+                          key="stk2_start_disabled", disabled=True)
+            else:
+                if st.button("▶️ Старт", type="primary", use_container_width=True, key="stk2_start"):
+                    if not _stk2_running:
+                        subprocess.run(['systemctl', 'start', 'finlab-stocks-tradestats'], capture_output=True)
+                    else:
+                        _send_cmd_stk2('RESUME')
+                    st.success("▶️ Старт отправлен")
+                    st.rerun()
+
+        with col_s2:
+            if _stk2_running and not _stk2_paused:
+                if st.button("⏸️ Пауза", type="secondary", use_container_width=True, key="stk2_pause"):
+                    _send_cmd_stk2('PAUSE')
+                    st.warning("⏸️ Пауза отправлена")
+                    st.rerun()
+            else:
+                st.button("⏸️ Пауза", type="secondary", use_container_width=True,
+                          key="stk2_pause_disabled", disabled=True)
+
+        with col_s3:
+            if _stk2_running:
+                if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="stk2_stop"):
+                    _send_cmd_stk2('STOP')
+                    st.error("🛑 Стоп отправлен")
+                    st.rerun()
+            else:
+                st.button("🛑 Стоп", type="secondary", use_container_width=True,
+                          key="stk2_stop_disabled", disabled=True)
+
+        st.caption("✅ Кнопки мгновенные (SIGUSR1). 5 сигналов TradeStats, SCORE_MIN=4, HOLD_DAYS=5, RVI>=30.")
+
+        if _stk2_open_df is not None and len(_stk2_open_df) > 0:
+            st.subheader("📊 Открытые позиции (TradeStats)")
+            _stk2_disp = _stk2_open_df[['ticker', 'direction', 'volume', 'entry_score',
+                                          'entry_price', 'stop_price', 'entry_time']].copy()
+            _stk2_disp.columns = ['Тикер', 'Направление', 'Объём', 'Скор',
+                                   'Цена входа', 'Стоп', 'Время входа']
+            _stk2_disp['Время входа'] = pd.to_datetime(_stk2_disp['Время входа']).dt.strftime('%d.%m %H:%M')
+            st.dataframe(_stk2_disp, use_container_width=True, hide_index=True)
+
+        if _stk2_closed_df is not None and len(_stk2_closed_df) > 0:
+            st.subheader("📈 Статистика (TradeStats)")
+            _stk2_closed_df = _stk2_closed_df.copy()
+            _stk2_closed_df['pnl'] = pd.to_numeric(_stk2_closed_df['pnl'], errors='coerce').fillna(0)
+            _eps_stk2 = 0.001
+            _stk2_closed_df['pnl_pct'] = _stk2_closed_df['pnl'] / (
+                _stk2_closed_df['entry_price'] * _stk2_closed_df['volume'].clip(lower=0.0001))
+            _prof_stk2 = _stk2_closed_df[_stk2_closed_df['pnl_pct'] > _eps_stk2]
+            _unprof_stk2 = _stk2_closed_df[_stk2_closed_df['pnl_pct'] < -_eps_stk2]
+            _be_stk2 = _stk2_closed_df[abs(_stk2_closed_df['pnl_pct']) <= _eps_stk2]
+            _total_pnl_stk2 = _stk2_closed_df['pnl'].sum()
+            _wr_stk2 = len(_prof_stk2) / (len(_prof_stk2) + len(_unprof_stk2)) * 100 if (len(_prof_stk2) + len(_unprof_stk2)) > 0 else 0
+
+            import numpy as _np_stk2
+            _sharpe_stk2 = 0.0
+            if len(_stk2_closed_df) > 1 and _np_stk2.std(_stk2_closed_df['pnl']) > 0:
+                _sharpe_stk2 = _np_stk2.mean(_stk2_closed_df['pnl']) / _np_stk2.std(_stk2_closed_df['pnl']) * _np_stk2.sqrt(252 / 5)
+
+            colst2_s1, colst2_s2, colst2_s3, colst2_s4 = st.columns(4)
+            with colst2_s1:
+                st.metric("Всего сделок", len(_stk2_closed_df))
+            with colst2_s2:
+                st.metric("Приб / Убыт / Б/у", f"{len(_prof_stk2)} / {len(_unprof_stk2)} / {len(_be_stk2)}")
+            with colst2_s3:
+                st.metric("Win Rate", f"{_wr_stk2:.1f}%")
+            with colst2_s4:
+                st.metric("Sharpe (H=5)", f"{_sharpe_stk2:.2f}")
+
+            colst2_p1, colst2_p2, colst2_p3, colst2_p4 = st.columns(4)
+            with colst2_p1:
+                st.metric("Общий PnL", f"{_total_pnl_stk2:+,.1f}₽".replace(",", " "))
+            with colst2_p2:
+                _avg_win_stk2 = _prof_stk2['pnl'].mean() if len(_prof_stk2) > 0 else 0
+                st.metric("Средний PnL (прибыльные)", f"{_avg_win_stk2:+.1f}₽")
+            with colst2_p3:
+                _avg_loss_stk2 = _unprof_stk2['pnl'].mean() if len(_unprof_stk2) > 0 else 0
+                st.metric("Средний PnL (убыточные)", f"{_avg_loss_stk2:+.1f}₽")
+            with colst2_p4:
+                if 'lqdt_diff' in _stk2_closed_df.columns:
+                    _lqdt_valid_stk2 = _stk2_closed_df['lqdt_diff'].dropna()
+                    if len(_lqdt_valid_stk2) > 0:
+                        _beat_stk2 = (_lqdt_valid_stk2 > 0).sum()
+                        _beat_rate_stk2 = _beat_stk2 / len(_lqdt_valid_stk2) * 100
+                        st.metric("Beat LQDT", f"{_beat_rate_stk2:.1f}% ({_beat_stk2}/{len(_lqdt_valid_stk2)})")
+
+            st.markdown("---")
+            st.subheader("📝 Журнал сделок (TradeStats)")
+            _stk2_disp2 = _stk2_closed_df[['ticker', 'direction', 'entry_price', 'exit_price',
+                                             'pnl', 'exit_reason', 'entry_time', 'exit_time']].copy()
+            _stk2_disp2.columns = ['Тикер', 'Направление', 'Вход', 'Выход', 'PnL (₽)',
+                                    'Причина', 'Время входа', 'Время выхода']
+            st.dataframe(_stk2_disp2.head(100), use_container_width=True, hide_index=True)
+        else:
+            st.info("Закрытых сделок пока нет (TradeStats)")
 
 
 # ============================================================
