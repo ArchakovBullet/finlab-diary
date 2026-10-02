@@ -4120,7 +4120,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов"],
+        ["📊 Обзор", "📊 Парная торговля", "📈 Робот акций", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -5211,6 +5211,181 @@ elif page == "📊 Торговые роботы":
             st.dataframe(_alg_disp2.head(100), use_container_width=True, hide_index=True)
         else:
             st.info("Закрытых сделок пока нет")
+
+    elif robot_tab == "📊 Робот фьючерсов (v2)":
+        st.subheader("📊 Робот фьючерсов (v2)")
+        st.info("TradeStats only | RVI>=30 | SCORE_MIN=4 | HOLD_DAYS=3 | Бумажный режим")
+
+        import subprocess
+        import sqlite3
+
+        _alg2_db_path = Path('/root/finlab/robots/futures_algopack_robot_v2.db')
+        _alg2_cmd_path = Path('/root/finlab/robots/futures_algopack_robot_v2_command.txt')
+        _alg2_state_path = Path('/root/finlab/robots/futures_algopack_robot_v2_state.json')
+
+        _alg2_result = subprocess.run(['systemctl', 'is-active', 'finlab-futures-algopack-v2'],
+                                      capture_output=True, text=True)
+        _alg2_running = _alg2_result.stdout.strip() == 'active'
+
+        _alg2_paused = False
+        if _alg2_state_path.exists():
+            try:
+                import json as _json2
+                _alg2_state = _json2.loads(_alg2_state_path.read_text())
+                _alg2_paused = _alg2_state.get('paused', False)
+            except Exception:
+                pass
+
+        _alg2_open_count = 0
+        _alg2_open_df = None
+        _alg2_closed_df = None
+
+        if _alg2_db_path.exists():
+            try:
+                _conn = sqlite3.connect(_alg2_db_path)
+                _alg2_open_df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="OPEN"', _conn)
+                _alg2_closed_df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
+                _conn.close()
+                _alg2_open_count = len(_alg2_open_df)
+            except Exception as _e:
+                st.error(f"Ошибка чтения БД v2: {_e}")
+
+        if _alg2_running:
+            if _alg2_paused:
+                st.warning(f"⏸️ Робот v2 на паузе ({_alg2_open_count} откр. позиций)")
+            elif _alg2_open_count > 0:
+                st.success(f"🟢 Робот v2 работает ({_alg2_open_count} откр. позиций)")
+            else:
+                st.success("🟢 Робот v2 работает (нет открытых позиций)")
+        else:
+            if _alg2_open_count > 0:
+                st.warning(f"🟡 Робот v2 остановлен ({_alg2_open_count} откр. позиций)")
+            else:
+                st.error("🔴 Робот v2 остановлен")
+
+        col_b1, col_b2, col_b3 = st.columns(3)
+
+        _alg2_pid = None
+        try:
+            _r2_pid = subprocess.run(
+                ['systemctl', 'show', '-p', 'MainPID', '--value', 'finlab-futures-algopack-v2'],
+                capture_output=True, text=True
+            )
+            _pid2_str = _r2_pid.stdout.strip()
+            if _pid2_str and _pid2_str != '0':
+                _alg2_pid = int(_pid2_str)
+        except Exception:
+            pass
+
+        def _send_cmd2(cmd: str):
+            try:
+                _alg2_cmd_path.write_text(cmd)
+            except Exception:
+                pass
+            if _alg2_pid:
+                try:
+                    subprocess.run(['kill', '-SIGUSR1', str(_alg2_pid)], capture_output=True)
+                except Exception:
+                    pass
+
+        with col_b1:
+            if _alg2_running and not _alg2_paused:
+                st.button("▶️ Старт", type="primary", use_container_width=True,
+                          key="alg2_start_disabled", disabled=True)
+            else:
+                if st.button("▶️ Старт", type="primary", use_container_width=True, key="alg2_start"):
+                    if not _alg2_running:
+                        subprocess.run(['systemctl', 'start', 'finlab-futures-algopack-v2'], capture_output=True)
+                    else:
+                        _send_cmd2('RESUME')
+                    st.success("▶️ Старт v2 отправлен")
+                    st.rerun()
+
+        with col_b2:
+            if _alg2_running and not _alg2_paused:
+                if st.button("⏸️ Пауза", type="secondary", use_container_width=True, key="alg2_pause"):
+                    _send_cmd2('PAUSE')
+                    st.warning("⏸️ Пауза v2 отправлена")
+                    st.rerun()
+            else:
+                st.button("⏸️ Пауза", type="secondary", use_container_width=True,
+                          key="alg2_pause_disabled", disabled=True)
+
+        with col_b3:
+            if _alg2_running:
+                if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="alg2_stop"):
+                    _send_cmd2('STOP')
+                    st.error("🛑 Стоп v2 отправлен")
+                    st.rerun()
+            else:
+                st.button("🛑 Стоп", type="secondary", use_container_width=True,
+                          key="alg2_stop_disabled", disabled=True)
+
+        st.caption("✅ Кнопки мгновенные (SIGUSR1). v2: TradeStats only, RVI>=30, SCORE_MIN=4, HOLD_DAYS=3.")
+
+        if _alg2_open_df is not None and len(_alg2_open_df) > 0:
+            st.subheader("📊 Открытые позиции (v2)")
+            _alg2_disp = _alg2_open_df[['ticker', 'direction', 'volume', 'entry_score',
+                                          'entry_price', 'stop_price', 'entry_time']].copy()
+            _alg2_disp.columns = ['Тикер', 'Направление', 'Объём', 'Скор',
+                                   'Цена входа', 'Стоп', 'Время входа']
+            _alg2_disp['Время входа'] = pd.to_datetime(_alg2_disp['Время входа']).dt.strftime('%d.%m %H:%M')
+            st.dataframe(_alg2_disp, use_container_width=True, hide_index=True)
+
+        if _alg2_closed_df is not None and len(_alg2_closed_df) > 0:
+            st.subheader("📈 Статистика v2")
+            _alg2_closed_df = _alg2_closed_df.copy()
+            _alg2_closed_df['pnl'] = pd.to_numeric(_alg2_closed_df['pnl'], errors='coerce').fillna(0)
+            _eps_rel2 = 0.001
+            _alg2_closed_df['pnl_pct'] = _alg2_closed_df['pnl'] / (
+                _alg2_closed_df['entry_price'] * _alg2_closed_df['volume'].clip(lower=0.0001))
+            _prof2 = _alg2_closed_df[_alg2_closed_df['pnl_pct'] > _eps_rel2]
+            _unprof2 = _alg2_closed_df[_alg2_closed_df['pnl_pct'] < -_eps_rel2]
+            _be2 = _alg2_closed_df[abs(_alg2_closed_df['pnl_pct']) <= _eps_rel2]
+            _total_pnl2 = _alg2_closed_df['pnl'].sum()
+            _wr2 = len(_prof2) / (len(_prof2) + len(_unprof2)) * 100 if (len(_prof2) + len(_unprof2)) > 0 else 0
+
+            import numpy as _np2
+            _sharpe2 = 0.0
+            if len(_alg2_closed_df) > 1 and _np2.std(_alg2_closed_df['pnl']) > 0:
+                _sharpe2 = _np2.mean(_alg2_closed_df['pnl']) / _np2.std(_alg2_closed_df['pnl']) * _np2.sqrt(252 / 3)
+
+            col2_s1, col2_s2, col2_s3, col2_s4 = st.columns(4)
+            with col2_s1:
+                st.metric("Всего сделок", len(_alg2_closed_df))
+            with col2_s2:
+                st.metric("Приб / Убыт / Б/у", f"{len(_prof2)} / {len(_unprof2)} / {len(_be2)}")
+            with col2_s3:
+                st.metric("Win Rate", f"{_wr2:.1f}%")
+            with col2_s4:
+                st.metric("Sharpe (H=3)", f"{_sharpe2:.2f}")
+
+            col2_p1, col2_p2, col2_p3, col2_p4 = st.columns(4)
+            with col2_p1:
+                st.metric("Общий PnL", f"{_total_pnl2:+,.1f}₽".replace(",", " "))
+            with col2_p2:
+                _avg_win2 = _prof2['pnl'].mean() if len(_prof2) > 0 else 0
+                st.metric("Средний PnL (прибыльные)", f"{_avg_win2:+.1f}₽")
+            with col2_p3:
+                _avg_loss2 = _unprof2['pnl'].mean() if len(_unprof2) > 0 else 0
+                st.metric("Средний PnL (убыточные)", f"{_avg_loss2:+.1f}₽")
+            with col2_p4:
+                if 'lqdt_diff' in _alg2_closed_df.columns:
+                    _lqdt_valid2 = _alg2_closed_df['lqdt_diff'].dropna()
+                    if len(_lqdt_valid2) > 0:
+                        _beat2 = (_lqdt_valid2 > 0).sum()
+                        _beat_rate2 = _beat2 / len(_lqdt_valid2) * 100
+                        st.metric("Beat LQDT", f"{_beat_rate2:.1f}% ({_beat2}/{len(_lqdt_valid2)})")
+
+            st.markdown("---")
+            st.subheader("📝 Журнал сделок (v2)")
+            _alg2_disp2 = _alg2_closed_df[['ticker', 'direction', 'entry_price', 'exit_price',
+                                             'pnl', 'exit_reason', 'entry_time', 'exit_time']].copy()
+            _alg2_disp2.columns = ['Тикер', 'Направление', 'Вход', 'Выход', 'PnL (₽)',
+                                    'Причина', 'Время входа', 'Время выхода']
+            st.dataframe(_alg2_disp2.head(100), use_container_width=True, hide_index=True)
+        else:
+            st.info("Закрытых сделок пока нет (v2)")
 
 
 # ============================================================
