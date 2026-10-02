@@ -575,7 +575,7 @@ def check_stops_only():
 
 def main():
     print("=" * 60)
-    print("🤖 ALGOPACK ROBOT |", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    print("🤖 РОБОТ АКЦИЙ (TradeStats) |", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     print("=" * 60)
     print(f"Тикеров: {len(TICKERS)}")
     print(f"MAX_POSITIONS: {MAX_POSITIONS}")
