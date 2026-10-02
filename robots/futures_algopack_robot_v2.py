@@ -31,8 +31,8 @@ from Utils.lqdt_benchmark import compare_to_lqdt, beat_lqdt_rate
 ROOT = Path('/root/finlab')
 DATA_ROOT = ROOT / 'data'
 DB_PATH = ROOT / 'robots' / 'futures_algopack_robot_v2.db'
-COMMAND_FILE = ROOT / 'robots' / 'futures_algopack_robot_command.txt'
-STATE_FILE = ROOT / 'robots' / 'futures_algopack_robot_state.json'
+COMMAND_FILE = ROOT / 'robots' / 'futures_algopack_robot_v2_command.txt'
+STATE_FILE = ROOT / 'robots' / 'futures_algopack_robot_v2_state.json'
 
 load_dotenv(ROOT / '.env')
 VK_TOKEN = os.getenv('VK_TOKEN', '')
