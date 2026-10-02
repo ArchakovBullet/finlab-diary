@@ -37,7 +37,7 @@ logger = setup_logger('tradestats_collector')
 FUTURES = ['CNYRUBF', 'EURRUBF', 'GAZPF', 'GLDRUBF', 'IMOEXF', 'SBERF', 'USDRUBF', 'BR', 'CE', 'CR', 'ED', 'FF', 'GD', 'MX', 'OJ', 'PD', 'PT', 'RI', 'SI', 'SV', 'VI', 'W4']
 
 # Акции (для которых есть Super Candles)
-STOCKS = ['SBER', 'GAZP', 'GMKN', 'LKOH', 'PLZL', 'ROSN', 'TATN', 'VTBR', 'HYDR', 'IRAO']
+STOCKS = ['AFLT', 'SBER', 'GAZP', 'GMKN', 'LKOH', 'HYDR', 'IRAO', 'PLZL', 'ROSN', 'TATN', 'VTBR', 'AFKS', 'T', 'YDEX', 'RUAL', 'MAGN', 'OZON', 'SMLT', 'MTLR', 'UGLD', 'NVTK', 'ALRS', 'SNGSP', 'VKCO', 'MGNT', 'X5', 'TRNFP', 'CHMF', 'SVCB', 'SGZH', 'NLMK', 'SPBE', 'SBERP', 'DOMRF', 'MOEX', 'SNGS', 'MVID', 'POSI', 'MTSS', 'PHOR', 'SIBN', 'UPRO', 'ASTR', 'ENPG', 'HHRU', 'RNFT', 'RTKM', 'WUSH', 'TATNP']
 
 DATA_DIR = Path('/root/finlab/data/tradestats')
 DATA_DIR.mkdir(parents=True, exist_ok=True)
