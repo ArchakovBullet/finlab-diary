@@ -3270,3 +3270,40 @@ HMM — не используем.
 ### Урок
 «Обзор» должен агрегировать ТОЛЬКО активных роботов.
 Выключенные (pairs, старый stocks) — не в «Общий PnL».
+
+## 03.10.2026 (суббота) — fix: keyring_pass.cfg (token0/token1/token2)
+
+### Проблема
+- keyring_pass.cfg (/root/.local/share/python_keyring/keyring_pass.cfg)
+  не парсился: ParsingError на line 14 (base64 без имени ключа и без отступа).
+- token1 был потерян (в файле остались token0 и token2).
+- Коллектор TradeStats ругался на каждый тикер:
+  «Ошибка при загрузке токена: Source contains parsing errors».
+
+### Диагноз
+- MOEXPy читает токен по частям: keyring.get_password('MOEXPy', f'token{index}').
+- Части по 500 байт, base64 → 668 символов.
+- Файл был повреждён 28.09 при fix_keyring_dup.py: потерян token1,
+  строка 14 осталась без имени ключа и отступа (отступ — таб \t).
+- В .env есть MOEX_TOKEN (основной), keyring — наследие MOEXPy.
+
+### Фикс (Python-скрипт, НЕ sed)
+- token0: из текущего (668 симв → 500 байт).
+- token1: из predupfix_20260928_202209 (668 симв → 500 байт).
+- token2: из текущего (668 симв → 500 байт).
+- en3 — не добавляли (не используется в коде).
+- Отступ — таб (\t), как в оригинале.
+- Бэкап: keyring_pass.cfg.bak_before_rebuild_20261003.
+
+### Проверка
+- configparser: парсится OK.
+- keyring.get_password: token0/1/2 → по 500 байт.
+- Сборка длинного токена: 3 части, 1500 байт, 2 точки (JWT).
+- Начало: eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6IC...
+
+### Урок
+- Отступ в keyring_pass.cfg — ТАБ, не 8 пробелов.
+- MOEXPy: токен по частям token0/token1/token2/...
+  (password_split_size=500).
+- Перед записью — сухой прогон (assert len > 0).
+- keyring_pass.cfg — только Python-скриптом.
