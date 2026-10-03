@@ -4130,24 +4130,7 @@ elif page == "📊 Торговые роботы":
         # Загружаем данные по роботам
         _robots_stats = {}
 
-        # Парный робот
-        _pairs_db = Path('/root/finlab/robots/pairs_robot.db')
-        if _pairs_db.exists():
-            _conn = _sqlite3.connect(_pairs_db)
-            _closed_pairs = pd.read_sql_query(
-                'SELECT * FROM positions WHERE status="CLOSED" AND (exit_price_a != 0 AND exit_price_b != 0)',
-                _conn
-            )
-            _open_pairs = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn)
-            _conn.close()
-            _pair_pnl = _closed_pairs['pnl'].sum()
-            _pair_wr = _calc_wr(_closed_pairs)
-            _robots_stats['📊 Парная торговля'] = {
-                'open': len(_open_pairs),
-                'pnl': _pair_pnl,
-                'wr': _pair_wr,
-                'db': _pairs_db
-            }
+        # Парный робот — выключен, в Обзор не включаем
 
         # Algopack-робот (заменяет старый «Робот фьючерсов»)
         _alg_db = Path('/root/finlab/robots/futures_algopack_robot.db')
@@ -4165,20 +4148,36 @@ elif page == "📊 Торговые роботы":
                 'db': _alg_db
             }
 
-        # Робот акций
-        _stk_db = Path('/root/finlab/robots/stocks_robot.db')
-        if _stk_db.exists():
-            _conn = _sqlite3.connect(_stk_db)
-            _closed_stk = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="CLOSED"', _conn)
-            _open_stk = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="OPEN"', _conn)
+        # Робот фьючерсов v2
+        _v2_db = Path('/root/finlab/robots/futures_algopack_robot_v2.db')
+        if _v2_db.exists():
+            _conn = _sqlite3.connect(_v2_db)
+            _closed_v2 = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
+            _open_v2 = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="OPEN"', _conn)
             _conn.close()
-            _stk_pnl = _closed_stk['pnl'].sum() if len(_closed_stk) > 0 else 0
-            _stk_wr = _calc_wr(_closed_stk)
-            _robots_stats['📈 Робот акций'] = {
-                'open': len(_open_stk),
-                'pnl': _stk_pnl,
-                'wr': _stk_wr,
-                'db': _stk_db
+            _v2_pnl = _closed_v2['pnl'].sum() if len(_closed_v2) > 0 else 0
+            _v2_wr = _calc_wr(_closed_v2)
+            _robots_stats['📊 Робот фьючерсов (v2)'] = {
+                'open': len(_open_v2),
+                'pnl': _v2_pnl,
+                'wr': _v2_wr,
+                'db': _v2_db
+            }
+
+        # Робот акций (TradeStats)
+        _stk2_db = Path('/root/finlab/robots/tradestats_stocks_robot.db')
+        if _stk2_db.exists():
+            _conn = _sqlite3.connect(_stk2_db)
+            _closed_stk2 = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
+            _open_stk2 = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="OPEN"', _conn)
+            _conn.close()
+            _stk2_pnl = _closed_stk2['pnl'].sum() if len(_closed_stk2) > 0 else 0
+            _stk2_wr = _calc_wr(_closed_stk2)
+            _robots_stats['📈 Робот акций (TradeStats)'] = {
+                'open': len(_open_stk2),
+                'pnl': _stk2_pnl,
+                'wr': _stk2_wr,
+                'db': _stk2_db
             }
 
         # Общая аналитика
@@ -4187,7 +4186,7 @@ elif page == "📊 Торговые роботы":
         # «Активных» = systemctl is-active
         import subprocess as _sp
         _active_robots = 0
-        for _svc in ['finlab-robot', 'finlab-stocks-robot', 'finlab-futures-algopack']:
+        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats']:
             _r = _sp.run(['systemctl', 'is-active', _svc], capture_output=True, text=True)
             if _r.stdout.strip() == 'active':
                 _active_robots += 1
@@ -4203,15 +4202,7 @@ elif page == "📊 Торговые роботы":
             _all_wins = 0
             for s in _robots_stats.values():
                 _conn = _sqlite3.connect(s['db'])
-                if 'pairs_robot' in str(s['db']):
-                    _df = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED" AND (exit_price_a != 0 AND exit_price_b != 0)', _conn)
-                    _all_trades += len(_df)
-                    _all_wins += len(_df[_df['pnl'] > 0])
-                elif 'stocks_robot' in str(s['db']):
-                    _df = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="CLOSED"', _conn)
-                    _all_trades += len(_df)
-                    _all_wins += len(_df[_df['pnl'] > 0])
-                elif 'futures_algopack' in str(s['db']):
+                if 'tradestats_stocks_robot' in str(s['db']) or 'futures_algopack' in str(s['db']):
                     _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
                     _all_trades += len(_df)
                     _all_wins += len(_df[_df['pnl'] > 0])
@@ -4227,18 +4218,7 @@ elif page == "📊 Торговые роботы":
         _all_closed_dfs = []
         for s in _robots_stats.values():
             _conn = _sqlite3.connect(s['db'])
-            if 'pairs_robot' in str(s['db']):
-                _df = pd.read_sql_query(
-                    'SELECT * FROM positions WHERE status="CLOSED" AND (exit_price_a != 0 AND exit_price_b != 0)',
-                    _conn
-                )
-                _df['exit_time'] = pd.to_datetime(_df['exit_time'])
-                _all_closed_dfs.append(_df[['exit_time', 'pnl']])
-            elif 'stocks_robot' in str(s['db']):
-                _df = pd.read_sql_query('SELECT * FROM stock_positions WHERE status="CLOSED"', _conn)
-                _df['exit_time'] = pd.to_datetime(_df['exit_time'])
-                _all_closed_dfs.append(_df[['exit_time', 'pnl']])
-            elif 'futures_algopack' in str(s['db']):
+            if 'tradestats_stocks_robot' in str(s['db']) or 'futures_algopack' in str(s['db']):
                 _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
                 _df['exit_time'] = pd.to_datetime(_df['exit_time'])
                 _all_closed_dfs.append(_df[['exit_time', 'pnl']])

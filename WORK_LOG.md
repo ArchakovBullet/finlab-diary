@@ -3239,3 +3239,34 @@ HMM — не используем.
 ### Урок
 - MOEX 2026: 7-дневная торговля. Сб/вс — сокращённая сессия.
 - is_moex_trading_day должен опираться ТОЛЬКО на списки праздников.
+
+## 03.10.2026 (суббота) — fix: Дашборд «Обзор» — только активные роботы
+
+### Проблема
+«Обзор» агрегировал всех роботов, включая выключенных:
+- pairs_robot (Стоп) → +2422.1₽ в «Общий PnL»
+- stocks_robot.db (masked, старый) → +1.85₽ в «Общий PnL»
+- v2 и stocks-tradestats (активные) — НЕ отображались
+- _active_robots считал по finlab-robot / finlab-stocks-robot (masked)
+  → давал 1 вместо 3.
+
+### Фикс (finlab_dashboard/app_v2.py)
+1. Убран блок pairs из _robots_stats.
+2. Убран блок старого stocks_robot.db.
+3. Добавлены блоки: futures_algopack_robot_v2.db, tradestats_stocks_robot.db.
+4. _active_robots: ['finlab-futures-algopack',
+   'finlab-futures-algopack-v2', 'finlab-stocks-tradestats'].
+5. WR и график PnL — только algopack / tradestats_stocks.
+Бэкап: app_v2.py.bak_obzor_20261003.
+
+### Проверка (симуляция логики)
+- Общий PnL: +2410.9₽ → -13.0₽
+- Общий WR: 45.9% → 18.8% (только v1)
+- Открытых: 12 (v1)
+- Активных роботов: 1 → 3
+- Список: v1 (-13.04₽, 12 поз.), v2 (0), stocks-tradestats (0).
+Дашборд: HTTP 200, health=ok.
+
+### Урок
+«Обзор» должен агрегировать ТОЛЬКО активных роботов.
+Выключенные (pairs, старый stocks) — не в «Общий PnL».
