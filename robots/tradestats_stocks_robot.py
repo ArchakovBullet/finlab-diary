@@ -182,11 +182,19 @@ def is_tradestats_fresh(ticker):
         df = pd.read_parquet(ts_file)
         if len(df) == 0:
             return False, None
-        last_row = df.iloc[-1]
-        last_dt = None
-        if 'tradedate' in df.columns:
-            last_dt = pd.to_datetime(last_row['tradedate'])
-        if last_dt is None:
+        # ФИКС: используем tradedate + tradetime (полный timestamp),
+        # а не только tradedate. Иначе age считается от 00:00.
+        if 'tradedate' in df.columns and 'tradetime' in df.columns:
+            _dt_series = pd.to_datetime(
+                df['tradedate'].astype(str) + ' ' + df['tradetime'].astype(str),
+                errors='coerce'
+            )
+            last_dt = _dt_series.max()
+        elif 'tradedate' in df.columns:
+            last_dt = pd.to_datetime(df['tradedate']).max()
+        else:
+            last_dt = None
+        if last_dt is None or pd.isna(last_dt):
             return False, None
         if last_dt.tzinfo is not None:
             last_dt = last_dt.tz_localize(None)
@@ -229,6 +237,9 @@ def get_last_tradedate(ticker):
 
 
 
+
+
+CONTRACT_CHANGE_LOG_PATH = ROOT / 'logs' / 'contract_change_log.json'
 
 
 def is_new_contract(ticker, days=3):

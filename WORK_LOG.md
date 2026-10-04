@@ -3307,3 +3307,41 @@ HMM — не используем.
   (password_split_size=500).
 - Перед записью — сухой прогон (assert len > 0).
 - keyring_pass.cfg — только Python-скриптом.
+
+## 04.10.2026 (воскресенье) — fix: stocks CONTRACT_CHANGE_LOG_PATH + freshness
+
+### Проблема 1: stocks — NameError
+- tradestats_stocks_robot.py: CONTRACT_CHANGE_LOG_PATH не определён.
+- is_new_contract() падал с NameError, исключение ловилось в main(),
+  робот писал «❌ Ошибка» и завершался. systemd (RestartSec=60)
+  перезапускал каждую минуту.
+- В v1 (стр. 257) и v2 (стр. 244) CONTRACT_CHANGE_LOG_PATH определён.
+- В stocks — пропущен при копировании.
+
+### Фикс 1
+- Добавлено: CONTRACT_CHANGE_LOG_PATH = ROOT / 'logs' / 'contract_change_log.json'
+  перед def is_new_contract() (стр. 234).
+- Бэкап: tradestats_stocks_robot.py.bak_contract_path_20261004.
+
+### Проблема 2: is_tradestats_fresh — неверный age
+- is_tradestats_fresh() использовал только tradedate (без tradetime):
+  last_dt = pd.to_datetime(last_row['tradedate']) → 00:00:00.
+- В 10:00 04.10 данные от 02.10 00:00 → age=34ч → fresh=False.
+- Робот пропускал все тикеры: «TradeStats устарел (34.0ч)».
+- Фактически: последняя запись 04.10 18:30, age должен быть ~15.5ч.
+
+### Фикс 2
+- Используем tradedate + tradetime (полный timestamp).
+- _dt_series = pd.to_datetime(df['tradedate'] + ' ' + df['tradetime'])
+- last_dt = _dt_series.max() — без зависимости от сортировки.
+- Файлы: futures_algopack_robot_v2.py, tradestats_stocks_robot.py.
+- Бэкапы: *.bak_freshness_20261004.
+
+### Проверка
+- is_tradestats_fresh: BR/SI/GAZPF/GAZP/SBER/LKOH → fresh=True, age=0.00ч.
+- Роботы перезапущены, active (running).
+
+### Урок
+- CONTRACT_CHANGE_LOG_PATH — обязателен в каждом роботе.
+- Freshness: tradedate + tradetime, не только tradedate.
+- df.iloc[-1] не всегда последняя по времени — использовать .max().
