@@ -3345,3 +3345,29 @@ HMM — не используем.
 - CONTRACT_CHANGE_LOG_PATH — обязателен в каждом роботе.
 - Freshness: tradedate + tradetime, не только tradedate.
 - df.iloc[-1] не всегда последняя по времени — использовать .max().
+
+## 05.10.2026 (понедельник) — v1: freshness + очистка БД
+
+### Проблема 1: v1 — баг freshness (тот же, что в v2/stocks)
+- futures_algopack_robot.py: is_tradestats_fresh использовал только
+  tradedate (без tradetime) → last_dt = 00:00, age завышен.
+- Фикс: tradedate + tradetime (полный timestamp), .max().
+- Бэкап: futures_algopack_robot.py.bak_freshness_20261005.
+
+### Проблема 2: мусор в БД — SHUTDOWN + STOP из другой ветки
+- 63 SHUTDOWN-сделки — из ветки ремонта кнопок Старт/Пауза/Стоп.
+  Позиции набраны до введения торгового окна.
+- 4 STOP-сделки — те же, из старой ветки.
+- Все закрылись в убыток (подтверждает важность окна 10:00–18:00).
+- Удалены для чистоты эксперимента.
+- Бэкапы: futures_algopack_robot.db.bak_shutdown_20261005,
+  futures_algopack_robot.db.bak_stop_20261005.
+
+### Что осталось в БД v1
+- 9 OPEN (новые, с торговым окном).
+- 0 CLOSED.
+
+### Важно: v1 vs v2 — сравнительный эксперимент
+- v1: SCORE_MIN=3, HOLD_DAYS=5, БЕЗ RVI.
+- v2: SCORE_MIN=4, HOLD_DAYS=3, RVI>=30.
+- НЕ трогаем v1 (RVI, SCORE_MIN) — иначе сравнение сломается.
