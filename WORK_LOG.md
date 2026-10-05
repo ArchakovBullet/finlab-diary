@@ -3371,3 +3371,32 @@ HMM — не используем.
 - v1: SCORE_MIN=3, HOLD_DAYS=5, БЕЗ RVI.
 - v2: SCORE_MIN=4, HOLD_DAYS=3, RVI>=30.
 - НЕ трогаем v1 (RVI, SCORE_MIN) — иначе сравнение сломается.
+
+## 05.10.2026 (понедельник) — fix: буферизация systemd (stdbuf -oL -eL)
+
+### Проблема
+- v1/v2/stocks в systemd писали в лог ТОЛЬКО заголовок:
+  «🤖 ALGOPACK ROBOT | ...» и «SCORE_MIN: 4».
+- Тело (Вне торгового времени, Открыто, Стопы проверены) —
+  НЕ попадало в лог.
+- Ручной запуск (python -u) — показывал всё.
+- Значит: буферизация вывода в systemd.
+
+### Причина
+- PYTHONUNBUFFERED=1 — отключает буфер Python, но не libc.
+- При записи в файл (StandardOutput=append:) libc буферизует.
+
+### Фикс
+- ExecStart: python → stdbuf -oL -eL python
+- Файлы: finlab-futures-algopack.service,
+  finlab-futures-algopack-v2.service, finlab-stocks-tradestats.service.
+- Бэкапы: *.bak_stdbuf_20261005.
+
+### Проверка
+- После рестарта в логах появилось:
+  ⏰ Вне торгового времени (10:00–18:00) — только стопы
+  Ожидание 10 мин (read_command каждые 30 сек)...
+
+### Урок
+- systemd + append: → нужен stdbuf -oL -eL.
+- PYTHONUNBUFFERED=1 недостаточно для line-buffering в файл.
