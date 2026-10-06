@@ -4183,6 +4183,27 @@ elif page == "📊 Торговые роботы":
         # Общая аналитика
         _total_pnl_all = sum(s['pnl'] for s in _robots_stats.values())
         _total_open = sum(s['open'] for s in _robots_stats.values())
+        
+        # Unrealized PnL по OPEN-позициям (по M10 close)
+        _unrealized_total = 0.0
+        for _rname, _rstat in _robots_stats.items():
+            _conn = _sqlite3.connect(_rstat['db'])
+            try:
+                _open_df = pd.read_sql_query('SELECT ticker, direction, entry_price FROM algopack_positions WHERE status="OPEN"', _conn)
+            except Exception:
+                _open_df = pd.DataFrame()
+            _conn.close()
+            for _, _orow in _open_df.iterrows():
+                _t = _orow['ticker']
+                _dir = _orow['direction']
+                _entry = _orow['entry_price']
+                try:
+                    _m10 = pd.read_parquet(f'/root/finlab/data/candles/{_t}_M10.parquet')
+                    _last = float(_m10['close'].iloc[-1])
+                    _unreal = (_last - _entry) if _dir == 'LONG' else (_entry - _last)
+                    _unrealized_total += _unreal
+                except Exception:
+                    pass
         # «Активных» = systemctl is-active
         import subprocess as _sp
         _active_robots = 0
@@ -4196,7 +4217,9 @@ elif page == "📊 Торговые роботы":
 
         col_a1, col_a2, col_a3, col_a4 = st.columns(4)
         with col_a1:
-            st.metric("Общий PnL", f"{_total_pnl_all:+.1f}₽")
+            _total_with_unreal = _total_pnl_all + _unrealized_total
+            st.metric("Общий PnL", f"{_total_with_unreal:+.1f}₽",
+                      delta=f"unrealized: {_unrealized_total:+.1f}₽")
         with col_a2:
             _all_trades = 0
             _all_wins = 0
