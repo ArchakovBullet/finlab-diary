@@ -1,214 +1,242 @@
 # FinLabPy — Паспорт для AI-ассистента
 
-**Актуально на:** 23.09.2026
-## ВАЖНО: Кэш GitHub raw — инструкция для AI
+**Актуально на:** 06.10.2026
+**Commit:** `496b962`
+**Сервер:** 159.194.219.117, `/root/finlab`
+**Python:** `/root/finlab/venv/bin/python`
 
-raw.githubusercontent.com КЭШИРУЕТСЯ до 5-10 минут.
-Если ты читаешь WORK_LOG — используй один из способов:
+---
 
-Способ 1: URL с timestamp — добавь ?t=<unixtime> в конец URL.
-Способ 2: GitHub API — api.github.com/repos/ArchakovBullet/supercandles-data/contents/WORK_LOG.md?ref=master
+## ВАЖНО: Как читать контекст
 
-Проверка актуальности: первая строка WORK_LOG.md — VERSION-маркер.
-Если VERSION старше 24 часов — читаешь из кэша.
+**Главный документ — этот README.** Он содержит всё необходимое.
 
-Автообновление VERSION: python3 /root/finlab/scripts/update_worklog_version.py
+**Дополнительно:**
+- **WORK_LOG.md** — история (что делали, когда).
+- **MIGRATION_SUMMARY.md** — миграция 28–29.09 (архив).
+- **finlab-diary/README.md** — дневник (зеркало).
+- **finlab_dashboard/README.md** — описание дашборда.
 
-### Альтернативные URL (без CDN-кэша, наш сервер)
-http://159.194.219.117:8888/WORK_LOG.md
-http://159.194.219.117:8888/README.md
+**Ссылки (raw с commit hash — без кэша):**
+- README: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/496b962/README.md`
+- WORK_LOG: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/496b962/WORK_LOG.md`
+- MIGRATION_SUMMARY: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/496b962/MIGRATION_SUMMARY.md`
 
-Systemd: finlab-http.service (Restart=always).
+**Альтернативные URL (наш сервер, без CDN-кэша):**
+- http://159.194.219.117:8888/README.md
+- http://159.194.219.117:8888/WORK_LOG.md
 
-### Самый надёжный канал для AI — raw с commit hash
-
-**Проблема:** raw без commit hash кэшируется CDN.
-
-**Решение:** raw С commit hash — уникальный URL, кэш пустой.
-
-**URL:**
-https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/<COMMIT_HASH>/WORK_LOG.md
-
-**Где взять COMMIT_HASH:**
-https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/master/COMMIT_HASH.txt
-
-**Автогенерация шаблона:**
-scripts/update_new_chat_template.sh
-
-
-
-
+**Где взять COMMIT_HASH:** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/master/COMMIT_HASH.txt`
 
 ---
 
 ## 0. Идеология проекта: подход Джима Саймонса
 
-**FinLabPy — это количественная торговля в духе Renaissance Technologies.**
+**FinLabPy — количественная торговля в духе Renaissance Technologies.**
 
-Мы опираемся на принципы **Джима Саймонса** — математика, основателя Renaissance Technologies (Medallion Fund: ~66% годовых, 30+ лет):
+Принципы Джима Саймонса (Medallion Fund: ~66% годовых, 30+ лет):
 
-1. **Данные — прежде всего.**
-   Свежесть критична: is_tf_fresh, is_futoi_fresh, is_moex_trading_day.
+1. **Данные — прежде всего.** Свежесть критична.
+2. **Статистика, а не интуиция.** WR, PnL, просадка — основа решений.
+3. **Системность и повторяемость.** Один алгоритм — один результат.
+4. **Много маленьких ставок.** Диверсификация.
+5. **Контроль риска.** Стопы, лимиты, фильтры.
+6. **Постоянное улучшение.** Анализ каждой сделки.
+7. **Наука, а не религия.** Гипотезы проверяются. Если не работает — отбрасываем.
+8. **Walk-forward обязателен.** Без него — Sharpe завышен в 3–4 раза.
+9. **Осторожно с p-hacking.** 20+ комбинаций — переобучение.
 
-2. **Статистика, а не интуиция.**
-   Win Rate, PnL, просадка — основа решений. Бэктесты перед внедрением.
-
-3. **Системность и повторяемость.**
-   Один алгоритм - один результат. Никаких ручных вмешательств.
-
-4. **Много маленьких ставок (диверсификация).**
-   Много пар, тикеров, стратегий. Риск на сделку маленький.
-
-5. **Контроль риска.**
-   Стопы обязательны. Лимиты позиций. Фильтры (время, волатильность).
-
-6. **Постоянное улучшение.**
-   Анализ каждой сделки. Оптимизация параметров.
-
-7. **Наука, а не религия.**
-   Гипотезы проверяются экспериментально. Если не работает - отбрасываем.
+---
 
 ## 1. Доступы
 
-- Сервер: root@159.194.219.117 (Ubuntu 24.04, Python 3.12)
-- Рабочая директория: /root/finlab
-- VS Code Server: http://159.194.219.117:8080
-- Токены: /root/finlab/.env
+- **Сервер:** root@159.194.219.117 (Ubuntu 24.04, Python 3.12).
+- **Рабочая директория:** `/root/finlab`.
+- **VS Code Server:** http://159.194.219.117:8080
+- **Дашборд (Streamlit):** http://159.194.219.117:8501
+- **HTTP-сервер (WORK_LOG, README):** http://159.194.219.117:8888
+- **Токены:** `/root/finlab/.env`
 
-## 2. Критично
+---
 
-### MOEX TLS-сертификаты
-Установка: bash /root/finlab/scripts/fix_moex_certs.sh
+## 2. Роботы в проде (3 активных)
 
-### BOM (Byte Order Mark)
-Файлы .py из Windows содержат BOM. Python 3.12 падает на ast.parse().
+### 1. finlab-futures-algopack (v1)
+- **Файл:** `robots/futures_algopack_robot.py`
+- **Логика:** 8 сигналов TradeStats + FutOI.
+- **Параметры:** SCORE_MIN=3, HOLD_DAYS=5, **без RVI**.
+- **Sharpe честный:** ~0.19.
+- **Systemd:** `finlab-futures-algopack.service`
+- **БД:** `robots/futures_algopack_robot.db` (`algopack_positions`)
 
-## 3. Структура проекта
+### 2. finlab-futures-algopack-v2 (v2)
+- **Файл:** `robots/futures_algopack_robot_v2.py`
+- **Логика:** 5 сигналов TradeStats.
+- **Параметры:** SCORE_MIN=4, HOLD_DAYS=3, **RVI>=30**.
+- **Sharpe честный:** 2.17.
+- **Systemd:** `finlab-futures-algopack-v2.service`
+- **БД:** `robots/futures_algopack_robot_v2.db` (`algopack_positions`)
 
-/root/finlab/
-  FinLabPy/
-    DataCollectors/ - сборщики (cron)
-    My_Indicators/ - индикаторы
-      stock_screener.py       # Скринер акций
-      stock_scanner_tf.py     # Вердикт D1+H1+M10
-      garch_indicator.py      # GARCH(1,1)
-      arms_index.py           # TRIN
-      market_regime.py        # Режим рынка
-      trading_session.py      # Сессия
-      zweig_filter.py         # Zweig
-      sector_analysis.py      # Сектор
-      unified_scanner.py      # Сканер фьючерсов
-    Strategies/, Utils/, Brokers/, MOEXPy/
-  robots/
-    pairs_robot.py + pairs_robot.db          # Парный
-    futures_robot.py + futures_robot.db      # Фьючерсный
-    stocks_robot.py + stocks_robot.db        # Акций (NEW 21.09)
-    stock_to_sector.json                     # Сектора акций
-    stop_config.json                         # Индивидуальные стопы
-  finlab_dashboard/
-    app_v2.py - Streamlit
-  scripts/
-    fix_moex_certs.sh
-    build_stock_to_sector.py
-    backtest_stop_levels.py
-  data/
-    candles/ - D1/H1/M10/H4
-    futoi/, futoi_1h/, futoi_4h/
-    hi2/, hi2_daily.parquet
-    sector_indices/ - 10 отраслевых индексов MOEX
-  .env
-  README.md
-  WORK_LOG.md
+### 3. finlab-stocks-tradestats (stocks)
+- **Файл:** `robots/tradestats_stocks_robot.py`
+- **Логика:** 10 акций (только LONG).
+- **Параметры:** SCORE_MIN=4, HOLD_DAYS=5, **RVI>=30**.
+- **Sharpe честный:** 1.73.
+- **Systemd:** `finlab-stocks-tradestats.service`
+- **БД:** `robots/tradestats_stocks_robot.db` (`algopack_positions`)
 
-## 4. Роботы (3 штуки)
+### DEAD (masked):
+- `finlab-robot.service` — pairs_robot (DEAD).
+- `finlab-stocks-robot.service` — старый stocks (DEAD).
+- `finlab-futures-robot.service` — старый futures (DEAD).
+- `finlab-futures-baseline.service` — baseline (DEAD).
 
-### Парный робот
-- Файл: robots/pairs_robot.py
-- Systemd: finlab-robot.service
-- БД: robots/pairs_robot.db
-- Логика: z-score спреда
-- Запрет шорта по акциям (is_stock)
-- MAX_POSITIONS: 10
-- Cooldown: 4ч
+---
 
-### Робот фьючерсов
-- Файл: robots/futures_robot.py
-- Systemd: finlab-futures-robot.service
-- БД: robots/futures_robot.db
-- Логика: unified_scanner (1D+4H+1H)
-- Вход: score >= 60 (или 80 в кризис)
-- Стоп: 3.2xATR (индивидуальный: RI/MG/GZ/MC = 2.5) + безубыток x1.001
+## 3. Дашборд (5 табов)
 
-### Робот акций (NEW - 21.09.2026)
-- Файл: robots/stocks_robot.py
-- Systemd: finlab-stocks-robot.service
-- БД: robots/stocks_robot.db
-- Логика: get_stock_scanner_verdict (D1+H1+M10)
-- Только LONG
-- Вход: score >= 60 (70 при CAUTION)
-- Стоп: 3.2xATR + безубыток x1.001
-- Тикеры: stocks[:50] (49 с данными)
-- MAX_POSITIONS: 10
-- Проверка: раз в час
+- **Файл:** `finlab_dashboard/app_v2.py` (~320 КБ).
+- **Systemd:** `finlab-dashboard.service`.
+- **Порт:** 8501.
 
-## 5. Сектора акций
+**Табы:**
+1. **📊 Обзор** — сводка по 3 активным роботам (realized + unrealized PnL).
+2. **📊 Парная торговля** — DEAD (masked).
+3. **📈 Робот акций (TradeStats)** — stocks.
+4. **📊 Робот фьючерсов** — v1.
+5. **📊 Робот фьючерсов (v2)** — v2.
 
-- Файл: robots/stock_to_sector.json
-- Источник: MOEX ISS
-- 10 отраслевых индексов
-- 104 тикера, stocks[:50] - 100%
-- Скрипт: scripts/build_stock_to_sector.py
+---
 
-## 6. Workflow
+## 4. Данные
 
-- Всё на сервере, VS Code Remote SSH
-- Git: git push origin master, git push finlab-dashboard master
-- WORK_LOG в .gitignore -> git add -f WORK_LOG.md
+- **TradeStats** (`data/tradestats/*.parquet`) — 69 файлов, 5.5 мес.
+- **FutOI** (`data/futoi_1h/futoi_1h.parquet`) — 63 тикера, 5 мес.
+- **MegaAlerts** (`data/mega_alerts/*.parquet`) — 303 файла, 19 типов.
+- **HI2** (`data/hi2/hi2_daily.parquet`) — 7414 строк, 216 тикеров.
+- **SuperCandles** (`data/supercandles/*.parquet`) — 134 файла (акции).
+- **Candles** (`data/candles/*_{D1,H1,M10,H4}.parquet`) — 299 тикеров.
+- **Funding** (`data/funding/funding.parquet`) — 973.
+- **Sector indices** (`data/sector_indices/*.parquet`) — IMOEX, RVI.
+- **LQDT** — бенчмарк (~16–17% годовых).
 
-## 7. Правила работы с AI
+**Cron (основные):**
+- TradeStats — 21:30 МСК (18:30 UTC).
+- FutOI — каждый час (10:00–23:00 МСК).
+- MegaAlerts — 21:30 МСК.
+- HI2 — 21:00 МСК.
+- SuperCandles — каждый час.
+- Candles — каждые 10 мин (10:00–23:00 МСК).
+- RVI — 22:00 МСК.
 
-- Обращение: Напарник
-- Формат: 1) Проблема, 2) Причина, 3) Рекомендация, 4) Команды, 5) Ожидаемый результат, 6) План
-- При правках: бэкап -> изменение -> проверка синтаксиса -> коммит
+---
 
-## 8. Полезные команды
+## 5. Тесты (walk-forward, rolling quantile 60д)
 
-# Статус роботов
-systemctl status finlab-robot.service finlab-futures-robot.service finlab-stocks-robot.service
+**Метод:** rolling quantile (60д) + вход по open (M10) + комиссия 0.28% + LQDT-бенчмарк.
 
-# Логи
-journalctl -u finlab-stocks-robot.service -n 30 --no-pager
-tail -30 /root/finlab/robots/stocks_robot.log
+**Результаты (06.10.2026):**
 
-# Открытые позиции
-sqlite3 /root/finlab/robots/stocks_robot.db "SELECT * FROM stock_positions WHERE status='OPEN';"
+| Фильтр | Данные | Сделок | WR | Sharpe | Устойчивость |
+|--------|--------|--------|-----|--------|--------------|
+| baseline (Algopack) | — | 480 | 63.7% | 0.091 | ✅ |
+| SuperTrend | Цена | 242 | 64.9% | **0.128** | ✅ |
+| FutOI | FutOI | 98 | 73.5% | **0.251** | ⚠️ нестабилен |
+| DMI/WillR/Force (цена) | Цена | 58–213 | 58–62% | 0.053–0.061 | ❌ |
+| DMI+ST+WillR+Force (Algopack) | Algopack | 26 | 73.1% | 0.557 | ❌ переобучение |
 
-# Свежесть данных
-/root/finlab/venv/bin/python /root/finlab/FinLabPy/DataCollectors/check_data_freshness.py
+**Выводы:**
+- **Технические индикаторы (DMI, WillR, Force) — НЕ работают.**
+- **SuperTrend — работает (0.128).**
+- **FutOI — работает (0.251), но нестабилен.**
+- **Baseline (Algopack) — устойчиво (0.091).**
 
-## 9. История
+---
 
-- 13.09-15.09 — Стопы, cooldown, rollover.
-- 16.09 — yur_buy_ratio, TradeStats, HI2.
-- 17.09 — Rollover, фильтр корреляции.
-- 18.09 — Защита от экспирации.
-- 19.09 — Cooldown, M10 каждые 10 мин, RI 2.5xATR.
-- 20.09 — is_moex_trading_day (сб/вс), индивидуальные стопы, запрет шорта по акциям.
-- 21.09 — exit_reason, abs(_corr), Робот акций, stock_to_sector.json, дашборд.
-- 22.09 — Сводка состояния.
+## 6. Что не сделано
 
-## 10. Открытые задачи
+- **MegaAlerts** — 16 типов (робот не написан, edge не считан).
+- **Расширение tradestats на 49 акциях** (тест).
+- **ML — Logistic Regression.**
+- **HI2 — честно.**
+- **Парный робот + Algopack** (обсуждение).
+- **v3 на FutOI + SuperTrend** (решение).
+- **Unrealized PnL** — в блоках v1/v2/stocks (только в «Обзоре»).
 
-Приоритет 1:
-- [ ] Merge FutOI (fiz_delta=0, D1 fiz_buy=50)
-- [ ] A/B тест сигналов
+---
 
-Приоритет 2:
-- [ ] Проверить робота акций в проде
-- [ ] Переделать backtest_stop_levels.py
-- [ ] Walk-forward оптимизация пар
+## 7. Фиксы 03–06.10.2026
 
-Приоритет 3:
-- [ ] use_container_width -> width='stretch'
-- [ ] Проверить 14 FAIL-пар
-- [ ] Cron для build_stock_to_sector.py
+| # | Фикс | Commit |
+|---|------|--------|
+| 1 | `is_moex_trading_day` (сб/вс — 7-дневка) | `109ffd2` |
+| 2 | Дашборд «Обзор» — только активные | `b859490` |
+| 3 | Keyring (`token0/1/2`) | `0940a29` |
+| 4 | stocks `CONTRACT_CHANGE_LOG_PATH` | `98b5418` |
+| 5 | `is_tradestats_fresh` (tradedate+tradetime) | `98b5418` |
+| 6 | v1 freshness + очистка БД | `98a2915` |
+| 7 | Буферизация systemd (`stdbuf -oL -eL`) | `cd84631` |
+| 8 | Unrealized PnL в дашборде | `7a7214f` |
+| 9 | README finlab_dashboard + finlab-diary | `ded79fa`, `496b962` |
+
+---
+
+## 8. Правила (для AI)
+
+1. **Обращение:** «Напарник».
+2. **WORK_LOG** — в `.gitignore` → `git add -f`.
+3. **Запись в WORK_LOG** — через `cat >>` (В КОНЕЦ).
+4. **После WORK_LOG** — commit + push в **2 remote** (`origin` + `diary`).
+5. **Не патчить Python** через sed — только `text.replace`.
+6. **keyring_pass.cfg** — только Python-скриптом.
+7. **Схемы БД:** `positions` / `futures_positions` / `stock_positions` / `algopack_positions`.
+8. **`systemctl stop` НЕ закрывает позиции.**
+9. **disabled ≠ masked** — робот только masked.
+10. **Комиссия 0.28%** (0.14% × 2).
+11. **Бенчмарк — LQDT** (~16–17% годовых).
+12. **Формат ответа:** 1) Проблема, 2) Рекомендация, 3) Команды, 4) Дальнейший план, 5) Ожидаемый результат.
+13. **Не трогать v2** (сравнительный эксперимент).
+
+---
+
+## 9. Ключевые файлы
+
+**Роботы:**
+- `robots/futures_algopack_robot.py` (v1)
+- `robots/futures_algopack_robot_v2.py` (v2)
+- `robots/tradestats_stocks_robot.py` (stocks)
+- `robots/pairs_robot.py` (DEAD)
+
+**Индикаторы:**
+- `FinLabPy/My_Indicators/algopack_signals.py` (фьючерсы)
+- `FinLabPy/My_Indicators/tradestats_signals.py` (акции)
+
+**Дашборд:**
+- `finlab_dashboard/app_v2.py`
+
+**Скрипты:**
+- `scripts/signal_tester.py`
+- `scripts/megaalerts_tester.py`
+
+---
+
+## 10. Текущее состояние (06.10.2026)
+
+- **v1:** 10 OPEN (06.10 10:03) + 3 OPEN (02.10, ждут time-exit 07.10).
+- **v2:** 0 сделок.
+- **stocks:** 0 сделок.
+- **3 робота:** running.
+- **Git:** чистый, commit `496b962`.
+
+---
+
+## 11. Ссылки
+
+- **GitHub (supercandles-data):** https://github.com/ArchakovBullet/supercandles-data
+- **GitHub (finlab-diary):** https://github.com/ArchakovBullet/finlab-diary
+- **WORK_LOG (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/496b962/WORK_LOG.md`
+- **MIGRATION_SUMMARY (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/496b962/MIGRATION_SUMMARY.md`
+
+---
+
+**Конец паспорта. При вопросах — см. WORK_LOG.**
