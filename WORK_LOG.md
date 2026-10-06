@@ -3676,3 +3676,98 @@ HMM — не используем.
 ### Урок
 - README — стабильный. WORK_LOG — живой.
 - Не дублировать.
+
+## 06.10.2026 (вечерняя сессия — фикс keyring + SI D1)
+
+### 🔴 Проблема 1: keyring_pass.cfg снова сломан (после 03.10)
+
+**Симптом:** `tradestats_collect_cron.log` — 540+ ошибок:
+`Source contains parsing errors: keyring_pass.cfg [line 17]: option 'token0' in section 'MOEXPy' already exists`
+
+**Диагностика (P/Q/U):**
+- Текущий `keyring_pass.cfg` (27 строк) — 2× `token0` + мусорный хвост `o5VXZRMzlubGQ=`.
+- Бэкап 03.10 (`before_rebuild`) — **тоже битый** (мусор на строке 14).
+- Бэкап 28.09 — **тоже битый** (`en3` + 2× `token0`).
+- Бэкап 07.09 — **тоже битый** (`oken2` опечатка + 2× `token0`).
+- **Все 4 файла не парсятся.** Эталонного нет.
+
+**Корневая причина:**
+- MOEXPy при ротации токена **дописывает** `token0`, не удаляя старый.
+- `keyring_pass.cfg` хранит **чанки** токена (base64 по 500 байт), а не сам токен.
+- Длина JWT = 1570 байт → **4 чанка**: token0/1/2/3 (500+500+500+70).
+- Прежние фиксы (03.10) пытались «спасти» битый файл — не работало.
+
+**Решение (X): пересобрать из `.env MOEX_TOKEN`.**
+- Читаем `MOEX_TOKEN` из `/root/finlab/.env` — валидный JWT (len=1570, dots=2, RS256, iss=sso2.moex.com).
+- Разбиваем на чанки по 500 байт → base64 → пишем `token0..token3` с отступом `\t`.
+- Бэкап старого файла: `keyring_pass.cfg.bak_before_env_rebuild_20261006_215442`.
+
+**Проверка (AA/DD):**
+- `configparser` — OK, keys `['token0','token1','token2','token3']`.
+- `keyring.get_password` — 4 чанка, склейка = 1570 байт.
+- **Совпадает с `.env`: True**.
+- `tradestats_collector` — **0 ошибок** keyring.
+- `candles_collector` — **0 ошибок**.
+
+### 🔧 `fix_keyring_dup.py` — обновлён (BB)
+
+**Старая логика:** пытался удалить дубликаты из битого файла. Не работало.
+**Новая логика:** пересборка `keyring_pass.cfg` из `.env MOEX_TOKEN`:
+- читает JWT из `.env`;
+- разбивает на чанки по 500 байт;
+- кодирует в base64;
+- пишет `[MOEXPy]` + `token0..tokenN` с отступом `\t`;
+- проверяет, что склейка через `keyring.get_password` = `.env`.
+
+**Использование:**
+- `python scripts/fix_keyring_dup.py` — пересобрать.
+- `python scripts/fix_keyring_dup.py --check` — только проверить.
+
+**Тест:** `--check` → `Совпадает с .env: True`. ✅
+
+### 🔧 Проблема 2: SI — нет D1 (робот пропускает)
+
+**Диагностика (T):**
+- `data/tradestats/SI_tradestats.parquet` — есть.
+- `data/candles/SI_*.parquet` — **нет** (только POSI, RUSI).
+- `candles_collector.py` читает тикеры из `tickers_config.json` (не хардкод).
+- `SI` отсутствовал в `futures` списке — **165 тикеров**, без SI.
+
+**Решение (V):**
+- Добавлен `SI` в `FinLabPy/DataCollectors/tickers_config.json` → futures (166 шт.).
+- Бэкап: `tickers_config.json.bak_si_20261006_*`.
+- Ручной прогон `candles_collector` → SI собран:
+  - `SI_M10.parquet` — 2551 свечей.
+  - `SI_H1.parquet` — 444 свечи.
+  - `SI_D1.parquet` — 22 строки, last=06.10.2026.
+
+**Проверка (Z):**
+- `get_atr("SI") = 1243.79` — работает.
+- `SI` в TICKERS v1 (стр. 54) и v2 (стр. 54).
+
+### ✅ Перезапуск роботов (CC)
+
+- `systemctl restart finlab-futures-algopack.service` — active.
+- `systemctl restart finlab-futures-algopack-v2.service` — active.
+- `systemctl restart finlab-stocks-tradestats.service` — active.
+- Логи: `SIGTERM → корректное завершение без закрытия позиций`, `Вне торгового времени`, ожидание.
+- SI подхватится в v1/v2 **07.10 в 10:00 МСК**.
+
+### 📝 Заметки
+
+- `keyring_pass.cfg` — ТОЛЬКО пересборка из `.env` (не пытаться спасать битый).
+- MOEXPy: `password_split_size=500`, хранит **base64-чанки**, а не сырой токен.
+- `keyring.get_password` **декодирует** base64 → возвращает raw-байты (500/500/500/70).
+- `candles_collector`: тикеры в `tickers_config.json` (не в коде).
+- `fix_keyring_dup.py` — пересборка, а не «починка дублей».
+
+### 🎯 На следующий раз
+
+- [ ] **SuperTrend(14, 3.0) в v1** — следующий крупный шаг.
+  - Walk-forward показал: Sharpe 0.128 vs baseline 0.091, 242 сделки, устойчиво.
+  - Внедрить как фильтр направления (LONG только если close > SuperTrend).
+  - Логику брать из тестов 06.10 (сохранились где-то в scripts/).
+- [ ] Проверить, что SI реально торгуется в v1/v2 (07.10, 10:00 МСК).
+- [ ] `tradestats_stocks_robot` — расширение с 10 на 49 акций.
+- [ ] Unrealized PnL в блоки v1/v2/stocks дашборда.
+- [ ] MegaAlerts — direction + робот.

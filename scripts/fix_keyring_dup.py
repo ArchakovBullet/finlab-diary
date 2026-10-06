@@ -1,107 +1,135 @@
+#!/usr/bin/env python3
 """
-Удаляет дублирующиеся ключи в секции [MOEXPy] файла keyring_pass.cfg.
-Оставляет первый экземпляр ключа, удаляет последующие (вместе со строками значения,
-которые идут с отступом).
+fix_keyring_dup.py — пересборка keyring_pass.cfg из .env MOEX_TOKEN.
 
-Перед записью делает свой бэкап.
-После записи проверяет: configparser парсит без DuplicateOptionError.
+Проблема: MOEXPy при ротации токена дописывает token0 в keyring_pass.cfg,
+не удаляя старый. Файл накапливает дубли и перестаёт парситься
+(configparser.DuplicateOptionError).
+
+Решение: НЕ пытаться «спасти» битый файл. Пересобрать его из .env MOEX_TOKEN
+заново. Логика MOEXPy:
+  - длинный JWT (base64) → байты (utf-8)
+  - разбить на чанки по 500 байт
+  - каждый чанк → base64
+  - записать как token0, token1, ... с отступом \t
+
+Использование:
+  python scripts/fix_keyring_dup.py            # fix
+  python scripts/fix_keyring_dup.py --check    # только проверить
 """
-import configparser, os, shutil, datetime as dt, re, sys
+import argparse
+import base64
+import shutil
+import sys
+from datetime import datetime
+from pathlib import Path
 
-CFG = os.path.expanduser("~/.local/share/python_keyring/keyring_pass.cfg")
-SECTION = "MOEXPy"
+from dotenv import dotenv_values
+import configparser
 
-def backup(path: str) -> str:
-    ts = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-    bak = f"{path}.predupfix_{ts}"
-    shutil.copy2(path, bak)
-    return bak
 
-def fix_file(path: str) -> tuple[int, list[str]]:
-    with open(path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+CFG = Path('/root/.local/share/python_keyring/keyring_pass.cfg')
+ENV = Path('/root/finlab/.env')
+SERVICE = 'MOEXPy'
+CHUNK_SIZE = 500
 
-    in_section = False
-    seen = set()          # ключи, уже встреченные в SECTION
-    removed_keys = []     # какие ключи удалили (для отчёта)
-    out_lines = []
-    i = 0
 
-    while i < len(lines):
-        line = lines[i]
-        stripped = line.strip()
+def rebuild():
+    # 1. Читаем токен
+    v = dotenv_values(ENV)
+    token = v.get('MOEX_TOKEN', '').strip()
+    if not token:
+        print('ОШИБКА: MOEX_TOKEN не найден в .env', file=sys.stderr)
+        return 1
 
-        # вход/выход из секции
-        if stripped.startswith("[") and stripped.endswith("]"):
-            in_section = (stripped == f"[{SECTION}]")
-            out_lines.append(line)
-            i += 1
-            continue
+    parts = token.split('.')
+    if len(parts) != 3:
+        print(f'ОШИБКА: MOEX_TOKEN не JWT ({len(parts)} частей)', file=sys.stderr)
+        return 1
 
-        # пустые строки и комментарии — оставляем как есть
-        if not stripped or stripped.startswith("#") or stripped.startswith(";"):
-            out_lines.append(line)
-            i += 1
-            continue
+    print(f'Токен из .env: len={len(token)}, dots={token.count(".")}')
 
-        # ключ = значение  (без ведущих пробелов, либо с ними — но ключ только без отступа)
-        m = re.match(r"^([A-Za-z0-9_]+)\s*=\s*(.*)$", line)
-        if in_section and m:
-            key = m.group(1)
-            if key in seen:
-                # дубликат: пропускаем эту строку + все последующие строки значения
-                # (значение может быть многострочным: строки с отступом / пустые внутри)
-                removed_keys.append(key)
-                i += 1
-                # пропускаем строки продолжения значения: с отступом (таб/пробел)
-                while i < len(lines) and lines[i][:1] in (" ", "\t") and lines[i].strip() != "":
-                    i += 1
-                continue
-            else:
-                seen.add(key)
-                out_lines.append(line)
-                i += 1
-                continue
+    # 2. Разбиваем на чанки по 500 байт
+    token_bytes = token.encode('utf-8')
+    chunks = [token_bytes[i:i+CHUNK_SIZE] for i in range(0, len(token_bytes), CHUNK_SIZE)]
+    print(f'Байт: {len(token_bytes)}, чанков: {len(chunks)}')
 
-        # всё остальное (включая строки значения) — как есть
-        out_lines.append(line)
-        i += 1
+    # 3. Кодируем каждый чанк в base64
+    encoded = [base64.b64encode(c).decode('ascii') for c in chunks]
+    for i, e in enumerate(encoded):
+        print(f'  token{i}: len={len(e)}')
 
-    # пишем только если есть что удалять
-    if removed_keys:
-        with open(path, "w", encoding="utf-8") as f:
-            f.writelines(out_lines)
+    # 4. Бэкап текущего файла
+    TS = datetime.now().strftime('%Y%m%d_%H%M%S')
+    if CFG.exists():
+        bak = CFG.parent / f'{CFG.name}.bak_rebuild_{TS}'
+        shutil.copy(CFG, bak)
+        print(f'Бэкап: {bak}')
 
-    return len(removed_keys), removed_keys
+    # 5. Пишем keyring_pass.cfg
+    lines = [f'[{SERVICE}]']
+    for i, e in enumerate(encoded):
+        lines.append(f'token{i} =')
+        lines.append(f'\t{e}')
+    lines.append('')
+    content = '\n'.join(lines)
+    CFG.write_text(content)
+    print(f'Записан: {CFG} ({len(content)} байт)')
 
-def validate(path: str) -> str:
-    p = configparser.ConfigParser()
+
+    # 6. Проверка
+    print('\n--- Проверка ---')
+    c = configparser.ConfigParser()
+    c.read(CFG)
+    print(f'configparser OK, keys: {list(c[SERVICE].keys())}')
+
+    import keyring
+    chunks_back = []
+    for i in range(20):
+        pw = keyring.get_password(SERVICE, f'token{i}')
+        if pw is None:
+            break
+        chunks_back.append(pw)
+    jwt = ''.join(chunks_back)
+    match = (jwt == token)
+    print(f'Склеено из keyring: len={len(jwt)}, dots={jwt.count(".")}')
+    print(f'Совпадает с .env: {match}')
+    return 0 if match else 1
+
+
+def check():
+    c = configparser.ConfigParser()
     try:
-        p.read(path)
-        return "OK"
+        c.read(CFG)
+        print(f'configparser OK, sections: {c.sections()}')
+        for s in c.sections():
+            print(f'  [{s}] keys: {list(c[s].keys())}')
     except Exception as e:
-        return f"FAIL: {type(e).__name__}: {e}"
+        print(f'configparser FAIL: {e}', file=sys.stderr)
+        return 1
+
+    import keyring
+    chunks = []
+    for i in range(20):
+        pw = keyring.get_password(SERVICE, f'token{i}')
+        if pw is None:
+            break
+        chunks.append(pw)
+    jwt = ''.join(chunks)
+    env_tok = dotenv_values(ENV).get('MOEX_TOKEN', '').strip()
+    print(f'keyring чанков: {len(chunks)}, jwt len: {len(jwt)}, dots: {jwt.count(".")}')
+    print(f'Совпадает с .env: {jwt == env_tok}')
+    return 0 if jwt == env_tok else 1
+
 
 def main():
-    print("CFG:", CFG)
-    if not os.path.exists(CFG):
-        print("НЕТ ФАЙЛА"); sys.exit(2)
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--check', action='store_true', help='только проверить')
+    args = ap.parse_args()
+    if args.check:
+        return check()
+    return rebuild()
 
-    bak = backup(CFG)
-    print("Бэкап:", bak)
 
-    n, removed = fix_file(CFG)
-    print(f"Удалено дублирующихся ключей: {n}")
-    if removed:
-        print("Ключи:", ", ".join(removed))
-
-    print("Валидация:", validate(CFG))
-
-    # дополнительные проверки
-    with open(CFG, "r", encoding="utf-8") as f:
-        content = f.read()
-    print("grep token0 (^token0):", len(re.findall(r"^token0", content, flags=re.M)))
-    print("grep 'nl -ba':", "ЕСТЬ" if "nl -ba" in content else "нет")
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main())
