@@ -1,12 +1,22 @@
-Привет, напарник! Продолжаем работу над FinLabPy.
+Привет, Напарник! Продолжаем работу над FinLabPy.
 
-Прочитай актуальный WORK_LOG и README (через commit hash, без кэша):
+Прочитай контекст проекта (наш сервер — всегда актуально, без кэша):
 
-1. https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/1db2615/WORK_LOG.md
-2. https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/1db2615/README.md
+1. README (паспорт — что такое FinLabPy, правила, доступы):
+   http://159.194.219.117:8888/README.md
 
-Проверь VERSION в первой строке WORK_LOG.md. Ожидаемый:
-<!-- VERSION: 2026-10-06 21:13 MSK | COMMIT: 1db2615 | LINES: 3678 -->
+2. WORK_LOG (живая история — текущее состояние, тесты, задачи):
+   http://159.194.219.117:8888/WORK_LOG.md
+
+Если наш сервер недоступен — используй GitHub raw (через commit hash):
+- COMMIT_HASH: https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/master/COMMIT_HASH.txt
+- README: https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/<COMMIT>/README.md
+- WORK_LOG: https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/<COMMIT>/WORK_LOG.md
+
+Проверка актуальности:
+- VERSION (первая строка WORK_LOG): см. http://159.194.219.117:8888/WORK_LOG.md
+
+Если нужна дополнительная информация — составь команды для терминала, я внесу ответы.
 
 Продолжаем работу! Твои ответы строго так:
 1. Проблема — что случилось.
