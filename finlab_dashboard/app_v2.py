@@ -4319,6 +4319,15 @@ elif page == "📊 Торговые роботы":
                 _robot_paused = bool(_state.get('paused', True))
             except Exception:
                 _robot_paused = True
+
+        # Проверяем, есть ли неприменённая команда в robot_command.txt
+        _pending_cmd = ''
+        _cmd_file = Path('/root/finlab/robots/robot_command.txt')
+        if _cmd_file.exists():
+            try:
+                _pending_cmd = _cmd_file.read_text().strip().upper()
+            except Exception:
+                _pending_cmd = ''
         
         # Проверяем открытые позиции
         import sqlite3 as _sqlite3
@@ -4333,6 +4342,9 @@ elif page == "📊 Торговые роботы":
                 _conn.close()
             except:
                 pass
+
+        if _pending_cmd:
+            st.info(f'⏳ Команда {_pending_cmd} в обработке (робот применит её в течение ~5 сек)...')
 
         if _robot_running and not _robot_paused:
             if _open_count > 0:
@@ -4382,6 +4394,8 @@ elif page == "📊 Торговые роботы":
                 # Робот на паузе — RESUME
                 if st.button("▶️ Старт", type="primary", use_container_width=True, key="start_resume"):
                     Path('/root/finlab/robots/robot_command.txt').write_text('RESUME')
+                    import time as _time
+                    _time.sleep(3)
                     st.success('▶️ RESUME отправлен')
                     st.rerun()
             else:
@@ -4396,6 +4410,8 @@ elif page == "📊 Торговые роботы":
                 # Робот торгует — PAUSE
                 if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_active'):
                     Path('/root/finlab/robots/robot_command.txt').write_text('PAUSE')
+                    import time as _time
+                    _time.sleep(3)
                     st.warning('⏸️ PAUSE отправлен. Новые позиции не открываются.')
                     st.rerun()
             else:

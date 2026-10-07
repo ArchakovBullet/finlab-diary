@@ -753,6 +753,13 @@ def main():
     # Инициализация БД
     init_db()
 
+    # Сохраняем стартовое состояние (paused=True — безопасный default)
+    _start_state = load_state()
+    _start_state['running'] = True
+    _start_state['updated'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    save_state(_start_state)
+    print(f"📝 Состояние сохранено: running=True, paused={_start_state.get('paused')}")
+
     # Проверка экспираций
     check_expiry()
 
@@ -802,7 +809,32 @@ def main():
             if state.get('paused', True):
                 check_expiry()
                 check_time_exits()
-                time.sleep(60)
+                # Проверяем команды каждые 5 сек (быстрая реакция на RESUME)
+                _paused_exit = False
+                for _ in range(12):  # 12 × 5 = 60 сек
+                    time.sleep(5)
+                    _cmd = process_command()
+                    if _cmd == 'PAUSE':
+                        state['paused'] = True
+                        save_state(state)
+                        print('⏸️ PAUSE: уже на паузе')
+                        break
+                    elif _cmd == 'RESUME':
+                        state['paused'] = False
+                        save_state(state)
+                        print('▶️ RESUME: торговля возобновлена')
+                        break
+                    elif _cmd == 'STOP':
+                        print('🛑 STOP: graceful shutdown')
+                        for pos in get_open_positions():
+                            close_position(pos[0], pos[1], pos[2], pos[3], 0, 0, 0)
+                        state['running'] = False
+                        save_state(state)
+                        running = False
+                        _paused_exit = True
+                        break
+                if _paused_exit:
+                    break
                 continue
 
             current_time = time.time()
