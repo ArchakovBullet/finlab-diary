@@ -4230,7 +4230,7 @@ elif page == "📊 Торговые роботы":
         # «Активных» = systemctl is-active
         import subprocess as _sp
         _active_robots = 0
-        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats']:
+        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats', 'finlab-robot']:
             _r = _sp.run(['systemctl', 'is-active', _svc], capture_output=True, text=True)
             if _r.stdout.strip() == 'active':
                 _active_robots += 1
@@ -4308,6 +4308,17 @@ elif page == "📊 Торговые роботы":
         # Проверяем статус через systemd
         _result = subprocess.run(['systemctl', 'is-active', 'finlab-robot'], capture_output=True, text=True)
         _robot_running = _result.stdout.strip() == 'active'
+
+        # Читаем paused из robot_state.json
+        import json as _json
+        _robot_paused = True  # безопасный default
+        _state_file = Path('/root/finlab/robots/robot_state.json')
+        if _state_file.exists():
+            try:
+                _state = _json.loads(_state_file.read_text())
+                _robot_paused = bool(_state.get('paused', True))
+            except Exception:
+                _robot_paused = True
         
         # Проверяем открытые позиции
         import sqlite3 as _sqlite3
@@ -4323,16 +4334,21 @@ elif page == "📊 Торговые роботы":
             except:
                 pass
 
-        if _robot_running:
+        if _robot_running and not _robot_paused:
             if _open_count > 0:
                 st.success(f"🟢 Робот работает ({_open_count} откр. позиций)")
             else:
                 st.success("🟢 Робот работает")
-        else:
+        elif _robot_running and _robot_paused:
             if _open_count > 0:
                 st.warning(f"🟡 Робот на паузе ({_open_count} откр. позиций)")
             else:
-                st.error("🔴 Робот остановлен (все позиции закрыты)")
+                st.warning("🟡 Робот на паузе (торговля приостановлена)")
+        else:
+            if _open_count > 0:
+                st.warning(f"🟡 Робот остановлен, но есть {_open_count} откр. позиций")
+            else:
+                st.error("🔴 Робот остановлен")
 
         st.markdown('''
         <style>
@@ -4359,9 +4375,12 @@ elif page == "📊 Торговые роботы":
         col_start, col_pause, col_stop = st.columns(3)
         
         with col_start:
-            if _robot_running:
-                # Робот работает — если на паузе → RESUME; если торгует → disabled
-                if st.button("▶️ Старт", type="primary", use_container_width=True, key="start_running"):
+            if _robot_running and not _robot_paused:
+                # Робот торгует — disabled
+                st.button("▶️ Старт", type="primary", use_container_width=True, key="start_running_disabled", disabled=True)
+            elif _robot_running and _robot_paused:
+                # Робот на паузе — RESUME
+                if st.button("▶️ Старт", type="primary", use_container_width=True, key="start_resume"):
                     Path('/root/finlab/robots/robot_command.txt').write_text('RESUME')
                     st.success('▶️ RESUME отправлен')
                     st.rerun()
@@ -4373,38 +4392,15 @@ elif page == "📊 Торговые роботы":
                     st.rerun()
         
         with col_pause:
-            if _robot_running:
-                if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_running'):
-                    # Отправляем команду PAUSE (робот продолжает работать, но не открывает новые позиции)
+            if _robot_running and not _robot_paused:
+                # Робот торгует — PAUSE
+                if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_active'):
                     Path('/root/finlab/robots/robot_command.txt').write_text('PAUSE')
-                    st.warning('⏸️ Робот на паузе. Новые позиции не открываются.')
+                    st.warning('⏸️ PAUSE отправлен. Новые позиции не открываются.')
                     st.rerun()
             else:
-                if _open_count > 0:
-                    # Пауза — жёлтая круглая, disabled
-                    st.markdown('''
-                    <style>
-                    .btn-pause-active {
-                        width: 80px;
-                        height: 80px;
-                        border-radius: 50%;
-                        background: linear-gradient(145deg, #FFC107, #FFA000);
-                        color: white;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 14px;
-                        font-weight: bold;
-                        box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-                        margin: 0 auto;
-                        cursor: not-allowed;
-                        opacity: 0.8;
-                    }
-                    </style>
-                    <div class="btn-pause-active">⏸️<br>Пауза</div>
-                    ''', unsafe_allow_html=True)
-                else:
-                    st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_stopped', disabled=True)
+                # На паузе или остановлен — disabled
+                st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_disabled', disabled=True)
 
         with col_stop:
             if _robot_running:
