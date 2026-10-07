@@ -4394,8 +4394,9 @@ elif page == "📊 Торговые роботы":
                 # Робот на паузе — RESUME
                 if st.button("▶️ Старт", type="primary", use_container_width=True, key="start_resume"):
                     Path('/root/finlab/robots/robot_command.txt').write_text('RESUME')
-                    import time as _time
-                    _time.sleep(3)
+                    with st.spinner('⏳ Отправка RESUME... (робот применит в течение 5 сек)'):
+                        import time as _time
+                        _time.sleep(3)
                     st.success('▶️ RESUME отправлен')
                     st.rerun()
             else:
@@ -4410,8 +4411,9 @@ elif page == "📊 Торговые роботы":
                 # Робот торгует — PAUSE
                 if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_active'):
                     Path('/root/finlab/robots/robot_command.txt').write_text('PAUSE')
-                    import time as _time
-                    _time.sleep(3)
+                    with st.spinner('⏳ Отправка PAUSE... (робот применит в течение 5 сек)'):
+                        import time as _time
+                        _time.sleep(3)
                     st.warning('⏸️ PAUSE отправлен. Новые позиции не открываются.')
                     st.rerun()
             else:
@@ -4423,8 +4425,9 @@ elif page == "📊 Торговые роботы":
                 # Робот работает — Стоп: STOP + wait + systemctl stop
                 if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="stop_running"):
                     Path('/root/finlab/robots/robot_command.txt').write_text('STOP')
-                    import time as _time
-                    _time.sleep(5)
+                    with st.spinner('⏳ Graceful shutdown... (закрываю позиции, ~5 сек)'):
+                        import time as _time
+                        _time.sleep(5)
                     subprocess.run(['systemctl', 'stop', 'finlab-robot'], capture_output=True)
                     st.success("Робот остановлен! Все позиции закрыты.")
                     st.rerun()
