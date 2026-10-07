@@ -4130,7 +4130,26 @@ elif page == "📊 Торговые роботы":
         # Загружаем данные по роботам
         _robots_stats = {}
 
-        # Парный робот — выключен, в Обзор не включаем
+        # Парный робот
+        _pairs_db = Path('/root/finlab/robots/pairs_robot.db')
+        if _pairs_db.exists():
+            _conn = _sqlite3.connect(_pairs_db)
+            try:
+                _closed_pairs = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn)
+                _open_pairs = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn)
+            except Exception:
+                _closed_pairs = pd.DataFrame()
+                _open_pairs = pd.DataFrame()
+            _conn.close()
+            _pairs_pnl = float(_closed_pairs['pnl'].sum()) if len(_closed_pairs) > 0 else 0.0
+            _pairs_wr = _calc_wr(_closed_pairs) if len(_closed_pairs) > 0 else 0
+            _robots_stats['📊 Парная торговля'] = {
+                'open': len(_open_pairs),
+                'pnl': _pairs_pnl,
+                'wr': _pairs_wr,
+                'db': _pairs_db,
+                'is_pairs': True,
+            }
 
         # Algopack-робот (заменяет старый «Робот фьючерсов»)
         _alg_db = Path('/root/finlab/robots/futures_algopack_robot.db')
@@ -4188,10 +4207,14 @@ elif page == "📊 Торговые роботы":
         _unrealized_total = 0.0
         for _rname, _rstat in _robots_stats.items():
             _conn = _sqlite3.connect(_rstat['db'])
-            try:
-                _open_df = pd.read_sql_query('SELECT ticker, direction, entry_price FROM algopack_positions WHERE status="OPEN"', _conn)
-            except Exception:
+            if _rstat.get('is_pairs'):
+                # Для пар — unrealized пока 0 (двухногая логика — отдельно)
                 _open_df = pd.DataFrame()
+            else:
+                try:
+                    _open_df = pd.read_sql_query('SELECT ticker, direction, entry_price FROM algopack_positions WHERE status="OPEN"', _conn)
+                except Exception:
+                    _open_df = pd.DataFrame()
             _conn.close()
             for _, _orow in _open_df.iterrows():
                 _t = _orow['ticker']
