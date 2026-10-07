@@ -341,11 +341,17 @@ def set_state(state: dict):
 def get_state() -> dict:
     """Прочитать состояние робота."""
     if not STATE_FILE.exists():
-        return {'paused': False}
+        # Безопасный default: не торговать, пока явно не получен RESUME
+        return {'paused': True}
     try:
-        return json.loads(STATE_FILE.read_text())
+        state = json.loads(STATE_FILE.read_text())
+        # Если ключа 'paused' нет — считаем, что на паузе (безопасно)
+        if 'paused' not in state:
+            state['paused'] = True
+        return state
     except Exception:
-        return {'paused': False}
+        # Ошибка чтения — безопасный default
+        return {'paused': True}
 
 
 def graceful_shutdown():
