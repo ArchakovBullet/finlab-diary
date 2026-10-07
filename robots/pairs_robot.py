@@ -90,6 +90,7 @@ TF_FRESH_STATE_FILE = ROOT / 'robots' / 'tf_fresh_state.json'
 
 # Кеш LASTTRADEDATE (общий с futures_robot)
 LAST_TRADEDATE_CACHE_PATH = ROOT / 'robots' / 'contract_last_tradedate.json'
+CONTRACT_CHANGE_LOG_PATH = ROOT / 'logs' / 'contract_change_log.json'
 try:
     with open(LAST_TRADEDATE_CACHE_PATH, 'r') as _f:
         LAST_TRADEDATE_CACHE = json.load(_f)
@@ -128,6 +129,23 @@ def is_expiring_soon(ticker, days=2):
     return days_left <= days
 
 
+def is_new_contract(ticker, days=3):
+    """True, если контракт сменился менее N дней назад.
+    Защита от нестабильности после rollover."""
+    if not CONTRACT_CHANGE_LOG_PATH.exists():
+        return False
+    try:
+        log = json.loads(CONTRACT_CHANGE_LOG_PATH.read_text())
+        entry = log.get(ticker)
+        if not entry:
+            return False
+        changed_at = datetime.strptime(entry['changed_at'], '%Y-%m-%d')
+        return (datetime.now() - changed_at).days < days
+    except Exception as e:
+        print(f"  ⚠️ {ticker}: ошибка is_new_contract: {e}")
+        return False
+
+
 def load_tf_fresh_state():
     """Загрузить состояние свежести из файла"""
     try:
@@ -142,6 +160,28 @@ def save_tf_fresh_state(state):
         json.dump(state, f)
 
 TF_FRESH_STATE = load_tf_fresh_state()
+
+
+def load_state() -> dict:
+    """Загрузить состояние робота. Безопасный default: paused=True."""
+    if not STATE_FILE.exists():
+        return {'paused': True, 'running': False}
+    try:
+        state = json.loads(STATE_FILE.read_text())
+        if 'paused' not in state:
+            state['paused'] = True
+        return state
+    except Exception as e:
+        print(f'  ⚠️ load_state: {e}')
+        return {'paused': True, 'running': False}
+
+
+def save_state(state: dict):
+    """Сохранить состояние робота."""
+    try:
+        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2))
+    except Exception as e:
+        print(f'  ⚠️ save_state: {e}')
 
 # Пороги свежести данных (в часах)
 FRESHNESS_THRESHOLDS = {
@@ -652,12 +692,20 @@ def check_expiry():
                     min_days = days_left
 
             if min_days is not None and min_days <= 2:
-                # Получить текущие цены
-                _time_col_a = 'begin' if 'begin' in pd.read_parquet(CANDLES_DIR / f'{ta}_{tf}.parquet').columns else 'tradedate'
-                df_a = pd.read_parquet(CANDLES_DIR / f'{ta}_{tf}.parquet')
-                df_b = pd.read_parquet(CANDLES_DIR / f'{tb}_{tf}.parquet')
-                price_a = float(df_a['close'].iloc[-1]) if not isinstance(df_a['close'].iloc[-1], bytes) else 0.0
-                price_b = float(df_b['close'].iloc[-1]) if not isinstance(df_b['close'].iloc[-1], bytes) else 0.0
+                # Получить текущие цены (одно чтение)
+                file_a = CANDLES_DIR / f'{ta}_{tf}.parquet'
+                file_b = CANDLES_DIR / f'{tb}_{tf}.parquet'
+                if not file_a.exists() or not file_b.exists():
+                    print(f'  ⚠️ {pair_name}: нет данных {tf} для {ta} или {tb} — пропуск')
+                    continue
+                df_a = pd.read_parquet(file_a)
+                df_b = pd.read_parquet(file_b)
+                if len(df_a) == 0 or len(df_b) == 0:
+                    continue
+                _last_a = df_a['close'].iloc[-1]
+                _last_b = df_b['close'].iloc[-1]
+                price_a = float(_last_a) if not isinstance(_last_a, bytes) else 0.0
+                price_b = float(_last_b) if not isinstance(_last_b, bytes) else 0.0
 
                 print(f'  ⏰ {pair_name}: экспирация через {min_days} дн. — ЗАКРЫВАЕМ')
                 close_position(pid, pair_name, base_pair, tf, 0, price_a, price_b)
@@ -701,7 +749,7 @@ def main():
     print(f"Объём: {VOLUME} {VOLUME_TYPE}")
     print(f"Проверка: M10 — каждые {CHECK_INTERVALS['M10']//60} мин, H1 — каждые {CHECK_INTERVALS['H1']//3600} ч")
     print("=" * 60)
-    
+
     # Инициализация БД
     init_db()
 
@@ -710,14 +758,14 @@ def main():
 
     # Проверка TIME_EXIT
     check_time_exits()
-    
+
     # Загружаем конфиг пар
     with open(CONFIG_PATH, 'r') as f:
         pairs_config = json.load(f)
-    
+
     running = True
     last_check = {'M10': 0, 'H1': 0, 'H4': 0}
-    
+
     while running:
         try:
             # Неторговый день — новые позиции не открываем
@@ -726,36 +774,54 @@ def main():
                 time.sleep(3600)
                 continue
 
+            # Загружаем состояние (безопасный default: paused=True)
+            state = load_state()
+
             # Проверяем команды
             cmd = process_command()
             if cmd == 'STOP':
                 print("🛑 Команда STOP: закрываем все позиции")
                 for pos in get_open_positions():
                     close_position(pos[0], pos[1], pos[2], pos[3], 0, 0, 0)
+                state['running'] = False
+                save_state(state)
                 running = False
                 break
             elif cmd == 'PAUSE':
-                print("⏸️ Команда PAUSE: робот приостановлен")
-                running = False
-                break
-            
+                state['paused'] = True
+                save_state(state)
+                print("⏸️ Команда PAUSE: новые позиции не открываются (робот продолжает проверять стопы)")
+                continue
+            elif cmd == 'RESUME':
+                state['paused'] = False
+                save_state(state)
+                print("▶️ Команда RESUME: торговля возобновлена")
+                continue
+
+            # Если на паузе — только проверка стопов и экспирации
+            if state.get('paused', True):
+                check_expiry()
+                check_time_exits()
+                time.sleep(60)
+                continue
+
             current_time = time.time()
-            
+
             # Проверяем сигналы по ТФ
             for tf, interval in CHECK_INTERVALS.items():
                 if current_time - last_check[tf] >= interval:
                     check_signals_by_tf(pairs_config, tf)
                     last_check[tf] = current_time
-            
+
             time.sleep(1)
-        
+
         except KeyboardInterrupt:
             print("🛑 Остановлено пользователем")
             break
         except Exception as e:
             print(f"❌ Ошибка: {e}")
             time.sleep(5)
-    
+
     print("✅ Робот остановлен")
 
 def is_pair_in_cooldown(pair_name):
@@ -885,12 +951,19 @@ def check_signals_by_tf(pairs_config, tf):
                 if is_expiring_soon(ticker_a, days=2) or is_expiring_soon(ticker_b, days=2):
                     _expiry_ok = False
 
+                # Проверка нового контракта (не открывать <3 дней после rollover)
+                _new_ok = True
+                if is_new_contract(ticker_a, days=3) or is_new_contract(ticker_b, days=3):
+                    _new_ok = False
+
                 # Проверяем вход (с фильтрами)
-                if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok:
+                if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:
                     if current_z >= entry_z and spread_trend > 0:
                         open_position(pair_name, base_pair, tf, 'SHORT_SPREAD', VOLUME, current_z, price_a, price_b)
                     elif current_z <= -entry_z and spread_trend < 0:
                         open_position(pair_name, base_pair, tf, 'LONG_SPREAD', VOLUME, current_z, price_a, price_b)
+                elif not _new_ok:
+                    print(f'  ⏰ {pair_name}: новый контракт <3 дн. — не открываем')
                 elif not _expiry_ok:
                     print(f'  ⏰ {pair_name}: экспирация ≤2 дн. — не открываем')
                 elif not _is_trading_time:

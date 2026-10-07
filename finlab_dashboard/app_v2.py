@@ -4337,25 +4337,24 @@ elif page == "📊 Торговые роботы":
         
         with col_start:
             if _robot_running:
-                # Робот работает — Старт зелёная, disabled
-                st.button("▶️ Старт", type="primary", use_container_width=True, key="start_running", disabled=True)
+                # Робот работает — если на паузе → RESUME; если торгует → disabled
+                if st.button("▶️ Старт", type="primary", use_container_width=True, key="start_running"):
+                    Path('/root/finlab/robots/robot_command.txt').write_text('RESUME')
+                    st.success('▶️ RESUME отправлен')
+                    st.rerun()
             else:
-                if _open_count > 0:
-                    # Робот на паузе — Старт без цвета
-                    if st.button("▶️ Старт", type="secondary", use_container_width=True, key="start_paused"):
-                        subprocess.run(['systemctl', 'start', 'finlab-robot'], capture_output=True)
-                        st.rerun()
-                else:
-                    # Робот остановлен — Старт без цвета
-                    if st.button("▶️ Старт", type="secondary", use_container_width=True, key="start_stopped"):
-                        subprocess.run(['systemctl', 'start', 'finlab-robot'], capture_output=True)
-                        st.rerun()
+                # Робот остановлен — systemctl start (поднимется в паузе)
+                if st.button("▶️ Старт", type="secondary", use_container_width=True, key="start_stopped"):
+                    subprocess.run(['systemctl', 'start', 'finlab-robot'], capture_output=True)
+                    st.success('▶️ Робот запущен в паузе. Нажмите «Старт» ещё раз для RESUMЕ.')
+                    st.rerun()
         
         with col_pause:
             if _robot_running:
                 if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='pause_running'):
-                    subprocess.run(['systemctl', 'stop', 'finlab-robot'], capture_output=True)
-                    st.warning('⏸️ Робот на паузе. Открытые позиции заморожены.')
+                    # Отправляем команду PAUSE (робот продолжает работать, но не открывает новые позиции)
+                    Path('/root/finlab/robots/robot_command.txt').write_text('PAUSE')
+                    st.warning('⏸️ Робот на паузе. Новые позиции не открываются.')
                     st.rerun()
             else:
                 if _open_count > 0:
@@ -4386,12 +4385,11 @@ elif page == "📊 Торговые роботы":
 
         with col_stop:
             if _robot_running:
-                # Робот работает — Стоп без цвета, кликабельная
+                # Робот работает — Стоп: STOP + wait + systemctl stop
                 if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="stop_running"):
-                    # Сначала закрываем позиции
                     Path('/root/finlab/robots/robot_command.txt').write_text('STOP')
                     import time as _time
-                    _time.sleep(2)
+                    _time.sleep(5)
                     subprocess.run(['systemctl', 'stop', 'finlab-robot'], capture_output=True)
                     st.success("Робот остановлен! Все позиции закрыты.")
                     st.rerun()
