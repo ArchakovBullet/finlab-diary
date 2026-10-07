@@ -54,7 +54,7 @@
       },
       "total_rows": 2376,
       "last_optimized": "2026-08-23 20:25:47",
-      "enabled": true
+      "enabled": false
     },
     "WUSH-WU_M10": {
       "pair_name": "WUSH-WU_M10",
@@ -166,7 +166,7 @@
       },
       "total_rows": 2344,
       "last_optimized": "2026-08-23 20:25:56",
-      "enabled": true
+      "enabled": false
     },
     "SIBN-SO_M10": {
       "pair_name": "SIBN-SO_M10",
@@ -222,7 +222,7 @@
       },
       "total_rows": 1950,
       "last_optimized": "2026-08-23 20:26:01",
-      "enabled": true
+      "enabled": false
     },
     "SFIN-SH_M10": {
       "pair_name": "SFIN-SH_M10",
@@ -334,7 +334,7 @@
       },
       "total_rows": 2025,
       "last_optimized": "2026-08-23 20:26:14",
-      "enabled": true
+      "enabled": false
     },
     "POSI-PS_M10": {
       "pair_name": "POSI-PS_M10",
@@ -446,7 +446,7 @@
       },
       "total_rows": 2095,
       "last_optimized": "2026-08-23 20:26:19",
-      "enabled": true
+      "enabled": false
     },
     "BANE-BN_M10": {
       "pair_name": "BANE-BN_M10",
@@ -558,7 +558,7 @@
       },
       "total_rows": 2169,
       "last_optimized": "2026-08-23 20:26:28",
-      "enabled": true
+      "enabled": false
     },
     "BELU-NB_M10": {
       "pair_name": "BELU-NB_M10",
@@ -726,7 +726,7 @@
       },
       "total_rows": 2246,
       "last_optimized": "2026-08-23 20:26:50",
-      "enabled": true
+      "enabled": false
     },
     "SFIN-SH_H1": {
       "pair_name": "SFIN-SH_H1",
@@ -2357,7 +2357,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": false
+      "enabled": true
     },
     "LK-RN_H1": {
       "pair_name": "LK-RN_H1",
@@ -2442,7 +2442,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": false
+      "enabled": true
     },
     "LK-HY_H4": {
       "pair_name": "LK-HY_H4",

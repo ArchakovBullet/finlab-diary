@@ -13,7 +13,7 @@ from pathlib import Path
 CANDLES = Path('/root/finlab/data/candles')
 CONFIG_FILE = Path('/root/finlab/FinLabPy/My_Indicators/pairs_config.json')
 
-COMMISSION = 0.0005  # 0.05% (вход + выход)
+COMMISSION = 0.0028  # 0.28% (0.14% x 2 — из README правило 10)
 SLIPPAGE = 0.0002    # 0.02%
 CORR_THRESHOLD = 0.7
 

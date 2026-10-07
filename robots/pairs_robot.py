@@ -565,7 +565,11 @@ def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price
     else:
         leg_b_pnl = (price_b - entry_price_b) * point_value_b * volume
 
-    total_pnl = leg_a_pnl + leg_b_pnl
+    # Комиссия 0.28% (0.14% x 2) от номинала двух ног
+    notional_a = abs(entry_price_a) * point_value_a * volume
+    notional_b = abs(entry_price_b) * point_value_b * volume
+    commission = (notional_a + notional_b) * 0.0028
+    total_pnl = leg_a_pnl + leg_b_pnl - commission
 
     # PnL в пунктах (без учёта point_value)
     if leg_a_direction == 'SELL':
