@@ -61,7 +61,7 @@
       "best_params": {
         "window": 40,
         "entry_z": 2.0,
-        "exit_z": 0.0
+        "exit_z": 0.5
       },
       "train_score": 3.191,
       "test_metrics": {
@@ -110,7 +110,7 @@
       },
       "total_rows": 2272,
       "last_optimized": "2026-08-23 20:25:50",
-      "enabled": true
+      "enabled": false
     },
     "GAZPF-GZ_M10": {
       "pair_name": "GAZPF-GZ_M10",
@@ -227,9 +227,11 @@
     "SFIN-SH_M10": {
       "pair_name": "SFIN-SH_M10",
       "best_params": {
-        "window": 25,
-        "entry_z": 3.0,
-        "exit_z": 1.0
+        "window": 30,
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "resid_window": 60,
+        "use_coint": true
       },
       "train_score": 2.136,
       "test_metrics": {
@@ -341,7 +343,7 @@
       "best_params": {
         "window": 40,
         "entry_z": 2.0,
-        "exit_z": 0.0
+        "exit_z": 0.5
       },
       "train_score": 2.547,
       "test_metrics": {
@@ -390,7 +392,7 @@
       },
       "total_rows": 2080,
       "last_optimized": "2026-08-23 20:26:16",
-      "enabled": true
+      "enabled": false
     },
     "SNGSP-SG_M10": {
       "pair_name": "SNGSP-SG_M10",
@@ -451,9 +453,11 @@
     "BANE-BN_M10": {
       "pair_name": "BANE-BN_M10",
       "best_params": {
-        "window": 60,
-        "entry_z": 3.0,
-        "exit_z": 0.0
+        "window": 30,
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "resid_window": 60,
+        "use_coint": true
       },
       "train_score": 4.518,
       "test_metrics": {
@@ -563,9 +567,11 @@
     "BELU-NB_M10": {
       "pair_name": "BELU-NB_M10",
       "best_params": {
-        "window": 25,
-        "entry_z": 2.0,
-        "exit_z": 0.0
+        "window": 30,
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "resid_window": 60,
+        "use_coint": true
       },
       "train_score": 4.369,
       "test_metrics": {
@@ -782,7 +788,7 @@
       },
       "total_rows": 403,
       "last_optimized": "2026-08-23 20:26:57",
-      "enabled": true
+      "enabled": false
     },
     "SOFL-S0_H1": {
       "pair_name": "SOFL-S0_H1",
@@ -838,7 +844,7 @@
       },
       "total_rows": 379,
       "last_optimized": "2026-08-23 20:27:02",
-      "enabled": true
+      "enabled": false
     },
     "RASP-RA_H1": {
       "pair_name": "RASP-RA_H1",
@@ -894,7 +900,7 @@
       },
       "total_rows": 362,
       "last_optimized": "2026-08-23 20:27:05",
-      "enabled": true
+      "enabled": false
     },
     "LKOH-HYDR_M10": {
       "pair_name": "LKOH-HYDR_M10",
@@ -2357,7 +2363,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "LK-RN_H1": {
       "pair_name": "LK-RN_H1",
@@ -2442,7 +2448,7 @@
         "max_drawdown": 0,
         "num_trades": 0
       },
-      "enabled": true
+      "enabled": false
     },
     "LK-HY_H4": {
       "pair_name": "LK-HY_H4",
@@ -2647,6 +2653,36 @@
         "num_trades": 0
       },
       "enabled": false
+    },
+    "GAZPF-SBERF_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "window": 30,
+        "resid_window": 60,
+        "use_coint": true
+      }
+    },
+    "GD-SV_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "window": 30,
+        "resid_window": 60,
+        "use_coint": true
+      }
+    },
+    "PD-SV_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.5,
+        "exit_z": 0.5,
+        "window": 30,
+        "resid_window": 60,
+        "use_coint": true
+      }
     }
   },
   "last_updated": "2026-09-29 20:40:14"

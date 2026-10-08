@@ -411,47 +411,70 @@ def calculate_correlation(df_a, df_b, window=20):
         return None
 
 
-def calculate_zscore(df_a, df_b, window=20):
-    """Рассчитать Z-score спреда (с выравниванием по времени)"""
-    try:
-        import numpy as np
-        
-        # Выравниваем по времени (begin)
-        # Выравниваем по времени (begin или tradedate)
-        _time_col_a = 'begin' if 'begin' in df_a.columns else 'tradedate'
-        _time_col_b = 'begin' if 'begin' in df_b.columns else 'tradedate'
-        df_a_renamed = df_a[[_time_col_a, 'close']].rename(columns={_time_col_a: 'begin'})
-        df_b_renamed = df_b[[_time_col_b, 'close']].rename(columns={_time_col_b: 'begin'})
-        merged = pd.merge(df_a_renamed, df_b_renamed,
-                          on='begin', suffixes=('_a', '_b'))
-        log_a = np.log(merged['close_a'])
-        log_b = np.log(merged['close_b'])
-        spread = log_a - log_b
-        
-        # Z-score
-        mean = spread.rolling(window=window).mean()
-        std = spread.rolling(window=window).std()
-        zscore = (spread - mean) / std
-        
-        # Тренд спреда (SMA20)
-        sma_period = 20
-        spread_sma = spread.rolling(window=sma_period).mean()
-        spread_trend = spread - spread_sma  # Положительный = спред растёт
+def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
+    """Z-score спреда.
 
-        return {
-            'current_zscore': zscore.iloc[-1],
-            'spread': spread.iloc[-1],
-            'mean': mean.iloc[-1],
-            'std': std.iloc[-1],
-            'spread_trend': spread_trend.iloc[-1],
-            'price_a': float(merged['close_a'].iloc[-1]) if not isinstance(merged['close_a'].iloc[-1], bytes) else 0.0,
-            'price_b': float(merged['close_b'].iloc[-1]) if not isinstance(merged['close_b'].iloc[-1], bytes) else 0.0
-        }
-    except Exception as e:
-        print(f"❌ Z-score error: {e}")
-        return None
+    Если use_coint=True — rolling OLS residuals:
+        log_a = beta * log_b + alpha + resid
+        z-score по resid.
+    Иначе — простой spread = log_a - log_b.
+    """
+    import numpy as np
+    _ca = 'begin' if 'begin' in df_a.columns else 'tradedate'
+    _cb = 'begin' if 'begin' in df_b.columns else 'tradedate'
+    a = df_a[[_ca, 'close']].rename(columns={_ca: 'dt'})
+    b = df_b[[_cb, 'close']].rename(columns={_cb: 'dt'})
+    m = pd.merge(a, b, on='dt', suffixes=('_a', '_b')).sort_values('dt').reset_index(drop=True)
+    m['close_a'] = m['close_a'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
+    m['close_b'] = m['close_b'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
+    m['log_a'] = np.log(m['close_a'].replace(0, np.nan))
+    m['log_b'] = np.log(m['close_b'].replace(0, np.nan))
 
-# ========== VK-УВЕДОМЛЕНИЯ ==========
+    if use_coint:
+        # Rolling OLS residuals
+        import numpy as _np
+        try:
+            from statsmodels.regression.linear_model import OLS as _OLS
+            from statsmodels.tools import add_constant as _add_constant
+        except ImportError:
+            use_coint = False
+
+    if use_coint:
+        resid = []
+        betas = []
+        for i in range(len(m)):
+            if i < resid_window:
+                resid.append(_np.nan); betas.append(_np.nan); continue
+            y = m['log_a'].iloc[i-resid_window:i].values
+            x = _add_constant(m['log_b'].iloc[i-resid_window:i].values)
+            try:
+                model = _OLS(y, x).fit()
+                beta = model.params[1]; alpha = model.params[0]
+                r = m['log_a'].iloc[i] - beta * m['log_b'].iloc[i] - alpha
+                resid.append(r); betas.append(beta)
+            except Exception:
+                resid.append(_np.nan); betas.append(_np.nan)
+        m['resid'] = resid
+        m['beta'] = betas
+        m['spread'] = m['resid']
+    else:
+        m['spread'] = m['log_a'] - m['log_b']
+
+    m['mean'] = m['spread'].rolling(window).mean()
+    m['std'] = m['spread'].rolling(window).std()
+    m['z'] = (m['spread'] - m['mean']) / m['std']
+
+    return {
+        'current_zscore': float(m['z'].iloc[-1]) if len(m) > 0 and not pd.isna(m['z'].iloc[-1]) else 0.0,
+        'price_a': float(m['close_a'].iloc[-1]),
+        'price_b': float(m['close_b'].iloc[-1]),
+        'spread_trend': float(m['z'].iloc[-1] - m['z'].iloc[-2]) if len(m) > 1 and not pd.isna(m['z'].iloc[-1]) and not pd.isna(m['z'].iloc[-2]) else 0.0,
+        'std': float(m['std'].iloc[-1]) if len(m) > 0 and not pd.isna(m['std'].iloc[-1]) else 0.0,
+        'mean': float(m['mean'].iloc[-1]) if len(m) > 0 and not pd.isna(m['mean'].iloc[-1]) else 0.0,
+    }
+
+
+
 def send_vk_message(message):
     """Отправить сообщение в VK"""
     if not VK_TOKEN:
@@ -741,6 +764,27 @@ def check_time_exits():
             print(f'  ⚠️ check_time_exits({pair_name}): {e}')
 
 
+def close_all_positions(reason='STOP'):
+    """Закрыть все открытые позиции по M10 close (реальные цены)."""
+    for pos in get_open_positions():
+        _pid = pos[0]; _pair = pos[1]; _base = pos[2]; _tf = pos[3]
+        _ta = pos[16] if len(pos) > 16 else None
+        _tb = pos[18] if len(pos) > 18 else None
+        _pa = 0.0; _pb = 0.0
+        try:
+            if _ta:
+                _fa = CANDLES_DIR / f'{_ta}_{_tf}.parquet'
+                if _fa.exists():
+                    _pa = float(pd.read_parquet(_fa)['close'].iloc[-1])
+            if _tb:
+                _fb = CANDLES_DIR / f'{_tb}_{_tf}.parquet'
+                if _fb.exists():
+                    _pb = float(pd.read_parquet(_fb)['close'].iloc[-1])
+        except Exception as e:
+            print(f'  ⚠️ close_all_positions({_pair}): {e}')
+        close_position(_pid, _pair, _base, _tf, 0, _pa, _pb)
+
+
 def main():
     print("=" * 60)
     print(f"🤖 РОБОТ ПАРНОЙ ТОРГОВЛИ | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -789,7 +833,7 @@ def main():
             if cmd == 'STOP':
                 print("🛑 Команда STOP: закрываем все позиции")
                 for pos in get_open_positions():
-                    close_position(pos[0], pos[1], pos[2], pos[3], 0, 0, 0)
+                    close_all_positions()
                 state['running'] = False
                 save_state(state)
                 running = False
@@ -827,7 +871,7 @@ def main():
                     elif _cmd == 'STOP':
                         print('🛑 STOP: graceful shutdown')
                         for pos in get_open_positions():
-                            close_position(pos[0], pos[1], pos[2], pos[3], 0, 0, 0)
+                            close_all_positions()
                         state['running'] = False
                         save_state(state)
                         running = False
@@ -926,12 +970,17 @@ def check_signals_by_tf(pairs_config, tf):
             df_b['close'] = df_b['close'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
             
             # Параметры
-            window = pair_data.get('best_params', {}).get('window', 20)
-            entry_z = pair_data.get('best_params', {}).get('entry_z', ENTRY_Z_DEFAULT)
-            exit_z = pair_data.get('best_params', {}).get('exit_z', EXIT_Z_DEFAULT)
-            
-            # Z-score
-            result = calculate_zscore(df_a, df_b, window=window)
+            _bp = pair_data.get('best_params', {})
+            window = _bp.get('window', 20)
+            entry_z = _bp.get('entry_z', ENTRY_Z_DEFAULT)
+            exit_z = _bp.get('exit_z', EXIT_Z_DEFAULT)
+            use_coint = _bp.get('use_coint', False)
+            resid_window = _bp.get('resid_window', 60)
+
+            # Z-score (с поддержкой cointegration residuals)
+            result = calculate_zscore(df_a, df_b, window=window,
+                                      use_coint=use_coint,
+                                      resid_window=resid_window)
             if not result:
                 continue
             
