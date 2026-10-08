@@ -3858,3 +3858,68 @@ HMM — не используем.
 **Приоритет 4:** Симуляция HFT-логики на M10.
 **Приоритет 5:** HFT (долгосрочно).
 
+
+## 08.10.2026 — сессия 2: диагностика state/config/логов + AUC 6/11
+
+### Робот (pairs_robot.py)
+- systemctl is-active finlab-robot → active.
+- robot_state.json: running=true, paused=false, open_positions=0, total_pnl=0, updated=18:35:57.
+- Проверки: M10 3/3 свежих → True, H4 8/8 свежих → True, H1 — нет активных пар.
+- Тикеров загружено: акций=138, фьючерсов=166.
+- Крашей нет (grep STOP|SHUTDOWN|Traceback|Error по robot.log пусто).
+- Deactivated в journald — ручные рестарты сессии 07–08.10 (fix _bp, fix _vol_ok, +7 H4-пар).
+
+### State-файл
+- Путь: robots/robot_state.json (НЕ robots/state.json — паспорт был неточен).
+- Поля: running, paused, open_positions, total_pnl, updated, last_check_m10, last_check_h1.
+- last_check_m10/last_check_h1 = null — РУДИМЕНТ с 2026-09-02.
+  - pairs_robot.py использует локальный last_check = {'M10':0,'H1':0,'H4':0} в main() (стр. 818),
+    в state не пишет (нет state['last_check_*'] ни в load_state, ни в save_state).
+  - load_state (стр. 165–176) эти ключи не создаёт.
+  - save_state: 804 (старт), 838/843/848/863/868/876 (pause/resume/команды).
+  - Дашборд (app_v2.py) не читает (grep last_check → пусто).
+  - Влияние на торговлю/робот/дашборд: НОЛЬ. Чистить при плановом ML-патче.
+
+### Config (pairs_config.json)
+- Всего пар: 72. Enabled: 11 (3 M10 + 8 H4).
+  M10: SFIN-SH_M10, BANE-BN_M10, BELU-NB_M10
+  H4:  BR-GAZPF_H4, GAZPF-SBERF_H4, GD-PT_H4, GD-SV_H4,
+       GLDRUBF-GD_H4, LK-IMOEXF_H4, PD-SV_H4, PT-SV_H4
+- Структура: pair_name, best_params{window, entry_z, exit_z, resid_window, use_coint},
+  train_score, test_metrics{...}, adf, cointegration, johansen, total_rows, last_optimized, enabled.
+- SFIN-SH_M10: window=30, entry_z=2.5, exit_z=0.5, resid_window=60, use_coint=true,
+  last_optimized=2026-08-23, sharpe=2.751, WR=1.0, trades=5.
+
+### Логи
+- robots/robot.log (StandardOutput=append + StandardError=append в unit).
+- Размер 1.2 МБ, свежий. Fallback на journalctl — из-за неверного имени (pairs_robot.log вместо robot.log).
+
+### ML (scripts/ml_pairs_lr.py)
+- Покрытие: 6 из 11 (нет BR-GAZPF_H4, GD-PT_H4, GLDRUBF-GD_H4, LK-IMOEXF_H4, PT-SV_H4).
+- AUC (walk-forward, avg):
+  SFIN-SH_M10:    0.613 ✅
+  BELU-NB_M10:    0.639 ✅
+  GAZPF-SBERF_H4: 0.550 ✅ (пограничный)
+  BANE-BN_M10:    0.489 ❌
+  GD-SV_H4:       0.516 ❌
+  PD-SV_H4:       0.491 ❌
+- Фичи: z-score, corr, std, spread_trend, beta. Target: PnL след. сделки > 0.
+- Комиссия 0.0028 в скрипте. TIME_EXIT_BARS=120.
+
+### Техдолг (в паспорт)
+1. last_check_m10/last_check_h1 в robot_state.json — рудимент. Чистить при ML-патче.
+2. ml_pairs_lr.py — расширить PAIRS с 6 до 11 пар.
+3. use_container_width → width='stretch' (deprecation warning).
+4. Бензин 92/95 — cointegration ✅, walk-forward ❌. Отложен.
+5. SBERF-IMOEXF_H4 — 3/5 фолдов. Не добавляем.
+
+### Git
+- HEAD 0335817 (master, origin/master, diary/master), дерево чистое.
+
+### Следующая сессия
+- Приоритет 2: ML-фильтр.
+  1) Расширить PAIRS в ml_pairs_lr.py до 11.
+  2) Walk-forward 5 фолдов по 11.
+  3) AUC-таблица.
+  4) Для AUC > 0.6 — ML-фильтр к z-score в pairs_robot.py.
+  5) Одним коммитом: ML-фильтр + чистка last_check_* в state.
