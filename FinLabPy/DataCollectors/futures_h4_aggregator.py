@@ -35,7 +35,6 @@ def aggregate_all():
         cfg = json.load(f)
     futures = cfg.get('futures', [])
 
-    lookback_dates = [(date.today() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(3)]
     total_new = 0
 
     for ticker in futures:
@@ -57,10 +56,7 @@ def aggregate_all():
             pl.col('begin').cast(pl.Utf8).str.slice(11, 8).alias('tradetime'),
         ])
 
-        # Фильтруем последние 3 дня
-        df_recent = df.filter(pl.col('tradedate').is_in(lookback_dates))
-        if df_recent.is_empty():
-            continue
+        df_recent = df
 
         h4_rows = []
         for block_start, block_end, label in H4_BLOCKS:

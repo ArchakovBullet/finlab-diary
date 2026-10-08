@@ -2683,6 +2683,56 @@
         "resid_window": 60,
         "use_coint": true
       }
+    },
+    "PT-SV_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.0,
+        "exit_z": 0.5,
+        "window": 20,
+        "resid_window": 30,
+        "use_coint": true
+      }
+    },
+    "GD-PT_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.0,
+        "exit_z": 0.5,
+        "window": 20,
+        "resid_window": 30,
+        "use_coint": true
+      }
+    },
+    "BR-GAZPF_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.0,
+        "exit_z": 0.5,
+        "window": 20,
+        "resid_window": 30,
+        "use_coint": true
+      }
+    },
+    "GLDRUBF-GD_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.0,
+        "exit_z": 0.5,
+        "window": 20,
+        "resid_window": 30,
+        "use_coint": true
+      }
+    },
+    "LK-IMOEXF_H4": {
+      "enabled": true,
+      "best_params": {
+        "entry_z": 2.0,
+        "exit_z": 0.5,
+        "window": 20,
+        "resid_window": 30,
+        "use_coint": true
+      }
     }
   },
   "last_updated": "2026-09-29 20:40:14"
