@@ -4103,3 +4103,37 @@ HMM — не используем.
   pairs_optimizer.save_pair_config — переписать под walk-forward + per-pair
   + не трогать ML-пары (GD-PT_H4, BELU-NB_M10, SFIN-SH_M10).
 - Бэкап config: pairs_config.json.bak_20261009_224420.
+
+## 09.10.2026 — ML-фильтр в проде (патч 3)
+
+### Что сделано
+- Патч 3.1: import pickle + load_ml_models() + ml_filter() в pairs_robot.py.
+- Патч 3.2: load_ml_models() вызывается в main() после init_db().
+- Патч 3.3: ML-фильтр встроен в check_signals_by_tf перед open_position.
+
+### Логика ML-фильтра
+- Только для 3 пар: GD-PT_H4, BELU-NB_M10, SFIN-SH_M10.
+- Фичи: z, std, corr, spread_trend, beta (из result после Патча 1).
+- Если proba >= 0.5 → PASS (open_position).
+- Если proba < 0.5 → BLOCK (не открываем, логируем).
+- Если модели нет → PASS без фильтра (как раньше).
+
+### Тесты
+- load_ml_models(): 3 модели загружены.
+  - BELU-NB_M10 (auc=0.639, n=159)
+  - GD-PT_H4 (auc=0.678, n=96)
+  - SFIN-SH_M10 (auc=0.618, n=344)
+- ml_filter на GD-PT_H4:
+  - Хорошие фичи → PASS=False, proba=0.031 (блокирует)
+  - Плохие фичи → PASS=False, proba=0.125 (блокирует)
+- Робот запущен: active, paused=false, 3 ML-модели в проде.
+
+### Наблюдение
+- Робот работает, ML-фильтр активен для 3 пар.
+- 8 пар без ML — торгуют как раньше.
+- SMLT_M10: stale-предупреждения (не в enabled-парах).
+
+### Техдолг
+- SMLT_M10 — stale data (age 10-15ч). Не в enabled-парах. Проверить.
+- Переобучение ML — раз в месяц (cron, после стабилизации).
+- ML-фильтр для пар с AUC < 0.6 — не нужен.

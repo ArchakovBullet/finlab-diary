@@ -14,6 +14,7 @@ import sqlite3
 import time
 import os
 import sys
+import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -33,6 +34,57 @@ try:
 except:
     CONTRACT_POINTS = {}
 CONFIG_PATH = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config.json'
+
+# ========== ML-ФИЛЬТР ==========
+ML_MODELS_DIR = ROOT / 'models'
+_ML_MODELS = {}
+
+
+def load_ml_models():
+    """Загрузить ML-модели из models/*.pkl в _ML_MODELS."""
+    global _ML_MODELS
+    _ML_MODELS = {}
+    if not ML_MODELS_DIR.exists():
+        print('⚠️ models/ не найдена — ML-фильтр отключён')
+        return
+    for pkl in sorted(ML_MODELS_DIR.glob('lr_*.pkl')):
+        try:
+            with open(pkl, 'rb') as f:
+                d = pickle.load(f)
+            pair = d['pair_name']
+            _ML_MODELS[pair] = {
+                'model': d['model'],
+                'scaler': d['scaler'],
+                'features': d['features'],
+                'window': d['window'],
+                'resid_window': d['resid_window'],
+                'avg_auc': d.get('avg_auc', 0),
+            }
+            print(f'✅ ML: {pair} (auc={d.get("avg_auc", 0):.3f}, n={d.get("n_signals", 0)})')
+        except Exception as e:
+            print(f'❌ ML: {pkl.name} — ошибка: {e}')
+    print(f'📦 ML-моделей загружено: {len(_ML_MODELS)}')
+
+
+def ml_filter(pair_name, features_dict):
+    """ML-фильтр. Возвращает (pass_bool, proba_or_None).
+
+    Если модели нет — (True, None) — пропускаем без фильтра.
+    Если proba >= 0.5 — (True, proba) — PASS.
+    Если proba < 0.5  — (False, proba) — BLOCK.
+    """
+    if pair_name not in _ML_MODELS:
+        return True, None
+    m = _ML_MODELS[pair_name]
+    try:
+        feats = [features_dict.get(f, 0.0) for f in m['features']]
+        X = m['scaler'].transform([feats])
+        proba = float(m['model'].predict_proba(X)[0, 1])
+        return (proba >= 0.5), proba
+    except Exception as e:
+        print(f'  ⚠️ ML filter error {pair_name}: {e}')
+        return True, None
+
 
 # ========== Загрузка тикеров (акции / фьючерсы) ==========
 TICKERS_CONFIG_PATH = ROOT / 'FinLabPy' / 'DataCollectors' / 'tickers_config.json'
@@ -804,6 +856,9 @@ def main():
     # Инициализация БД
     init_db()
 
+    # Загрузка ML-моделей (для фильтра)
+    load_ml_models()
+
     # Сохраняем стартовое состояние (paused=True — безопасный default)
     _start_state = load_state()
     _start_state['running'] = True
@@ -1047,10 +1102,28 @@ def check_signals_by_tf(pairs_config, tf):
 
                 # Проверяем вход (с фильтрами)
                 if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:
+                    _signal = None
                     if current_z >= entry_z and spread_trend > 0:
-                        open_position(pair_name, base_pair, tf, 'SHORT_SPREAD', VOLUME, current_z, price_a, price_b)
+                        _signal = 'SHORT_SPREAD'
                     elif current_z <= -entry_z and spread_trend < 0:
-                        open_position(pair_name, base_pair, tf, 'LONG_SPREAD', VOLUME, current_z, price_a, price_b)
+                        _signal = 'LONG_SPREAD'
+
+                    if _signal is not None:
+                        # ML-фильтр (только для пар с обученной моделью)
+                        _ml_feats = {
+                            'z': current_z,
+                            'std': result.get('std', 0.0),
+                            'corr': result.get('corr', 0.0),
+                            'spread_trend': spread_trend,
+                            'beta': result.get('beta', 0.0),
+                        }
+                        _ml_pass, _ml_proba = ml_filter(pair_name, _ml_feats)
+                        if _ml_pass:
+                            if _ml_proba is not None:
+                                print(f'  🤖 ML PASS {pair_name}: proba={_ml_proba:.3f} → {_signal}')
+                            open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b)
+                        else:
+                            print(f'  🚫 ML BLOCK {pair_name}: proba={_ml_proba:.3f} → {_signal} (z={current_z:+.2f})')
                 elif not _new_ok:
                     print(f'  ⏰ {pair_name}: новый контракт <3 дн. — не открываем')
                 elif not _expiry_ok:
