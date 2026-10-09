@@ -17,19 +17,12 @@ COMMISSION = 0.0028
 TIME_EXIT_BARS = 120
 
 PAIRS = [
-    # M10 (3)
     ('SFIN', 'SH', 'M10'),
     ('BANE', 'BN', 'M10'),
     ('BELU', 'NB', 'M10'),
-    # H4 (8)
-    ('BR', 'GAZPF', 'H4'),
     ('GAZPF', 'SBERF', 'H4'),
-    ('GD', 'PT', 'H4'),
     ('GD', 'SV', 'H4'),
-    ('GLDRUBF', 'GD', 'H4'),
-    ('LK', 'IMOEXF', 'H4'),
     ('PD', 'SV', 'H4'),
-    ('PT', 'SV', 'H4'),
 ]
 
 
