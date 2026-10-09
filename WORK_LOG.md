@@ -3964,3 +3964,45 @@ HMM — не используем.
   3) AUC-таблица.
   4) Для AUC > 0.6 — ML-фильтр к z-score.
   5) Одним коммитом: ML-фильтр + чистка last_check_* + flock для cron.
+
+## 09.10.2026 — чистка старых БД роботов
+
+### Что сделано
+- Парный робот остановлен (graceful), БД + state забэкаплены.
+- pairs_robot.db: DELETE FROM positions/trades, sqlite_sequence сброшен, VACUUM.
+  → 0 строк, размер 16 КБ (было 53 КБ).
+- Обнулены все старые БД (6 шт):
+  - futures_algopack_robot.db (algopack_positions: 19 → 0)
+  - futures_algopack_robot_v2.db (algopack_positions: 6 → 0)
+  - tradestats_stocks_robot.db (algopack_positions: 2 → 0)
+  - pairs_robot_algopack.db (positions: 86 → 0, trades: 164 → 0)
+  - futures_robot_baseline.db (futures_positions: 15 → 0)
+  - stocks_robot.db (stock_positions: 38 → 0)
+- VACUUM для всех 6 БД.
+- Робот запущен обратно: active, paused=false, open_positions=0, total_pnl=0.
+
+### Дашборд
+- Общий PnL: +2860.5₽ → 0₽.
+- WR: 37.0% → 0%.
+- Все роботы в дашборде: 0 позиций, PnL=0.
+- Парный робот: 🟢 работает, 0 позиций, PnL=0.
+
+### Бэкапы
+- Все БД забэкаплены перед чисткой (.bak_20261009_*).
+- pairs_robot.db.bak_20261009_202000, robot_state.json.bak_20261009_202000.
+- futures_robot_baseline.db.bak_20261009_203913, stocks_robot.db.bak_20261009_203913.
+
+### Причина
+- Данные со старой логикой (до патчей 07–08.10) не нужны новому роботу.
+- Дашборд суммировал PnL старых роботов (v1/v2/stocks) в «Общий PnL» — вводило в заблуждение.
+
+### Git
+- b3aabd0 (HEAD), оба remote синхронизированы.
+
+### Следующая сессия
+- Приоритет 2: ML-фильтр.
+  1) Расширить PAIRS в ml_pairs_lr.py с 6 до 11 (добавить BR-GAZPF_H4, GD-PT_H4, GLDRUBF-GD_H4, LK-IMOEXF_H4, PT-SV_H4).
+  2) Walk-forward 5 фолдов по 11.
+  3) AUC-таблица.
+  4) Для AUC > 0.55 — ML-фильтр к z-score.
+  5) Одним коммитом: ML-фильтр + чистка last_check_* + flock для cron.
