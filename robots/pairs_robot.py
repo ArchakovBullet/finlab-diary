@@ -244,11 +244,16 @@ FRESHNESS_THRESHOLDS = {
 }
 
 def is_moex_trading_day():
-    """Проверить, что сегодня торговый день MOEX (упрощённо, 2026)."""
+    """Проверить, что сегодня торговый день MOEX (упрощённо, 2026).
+
+    Сб (5) — ТОРГОВЫЙ (допсессия MOEX).
+    Вс (6) — неторговый.
+    Праздники — по спискам.
+    """
     from datetime import datetime as _dt
     now = _dt.now()
-    # Сб (5) и Вс (6) — неторговые
-    if now.weekday() >= 5:
+    # Только Вс (6) — неторговый. Сб (5) — торговый (допсессия).
+    if now.weekday() == 6:
         return False
     no_trade_weekends = [
         (1,3),(1,4),(1,10),(1,11),(2,14),(2,15),(3,7),(3,8),
@@ -1065,6 +1070,11 @@ def check_signals_by_tf(pairs_config, tf):
                 continue
             
             has_position = any(p[1] == pair_name and p[3] == tf for p in open_positions)
+
+            # Логируем z-score для каждой пары
+            _beta = result.get('beta', 0.0)
+            _corr_val = result.get('corr', 0.0)
+            print(f'  📊 {pair_name}: z={current_z:+.2f} (entry={entry_z}), corr={_corr_val:.2f}, beta={_beta:.2f}')
             
             if not has_position:
                 # Фильтр времени: не входить в конце сессии (после 18:00 МСК)
@@ -1084,10 +1094,12 @@ def check_signals_by_tf(pairs_config, tf):
                     if _vol_ratio > 0.02:
                         _vol_ok = False
                 
-                # Фильтр корреляции: corr < 0.7 → не входить
+                # Фильтр корреляции: только для простого spread.
+                # Для cointegration residuals — не применять (residuals уже коинтегрированы,
+                # corr close не показатель).
                 _corr_ok = True
                 _corr = calculate_correlation(df_a, df_b, window=50)
-                if _corr is not None and abs(_corr) < 0.7:
+                if not use_coint and _corr is not None and abs(_corr) < 0.7:
                     _corr_ok = False
 
                 # Проверка экспирации (не открывать за 2 дня)
@@ -1099,6 +1111,16 @@ def check_signals_by_tf(pairs_config, tf):
                 _new_ok = True
                 if is_new_contract(ticker_a, days=3) or is_new_contract(ticker_b, days=3):
                     _new_ok = False
+
+                # Логируем причины отказа
+                if not (_is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok):
+                    _reasons = []
+                    if not _is_trading_time: _reasons.append('time')
+                    if not _vol_ok: _reasons.append('vol')
+                    if not _corr_ok: _reasons.append('corr')
+                    if not _expiry_ok: _reasons.append('expiry')
+                    if not _new_ok: _reasons.append('new_contract')
+                    print(f'  ⛔ {pair_name}: фильтры — {", ".join(_reasons)} (z={current_z:+.2f})')
 
                 # Проверяем вход (с фильтрами)
                 if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:
