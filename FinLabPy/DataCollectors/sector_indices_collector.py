@@ -35,7 +35,7 @@ INDICES = {
     'MOEXFN': 'MOEXFN_D1.parquet',   # Финансы
     'MOEXMM': 'MOEXMM_D1.parquet',   # Металлы и добыча
     'MOEXEU': 'MOEXEU_D1.parquet',   # Электроэнергетика
-    'MOEXTL': 'MOEXTL_D1.parquet',   # Телеком
+    # MOEXTL удалён 09.10.2026 — делистинг на MOEX, телеком теперь в MOEXIT
     'MOEXCH': 'MOEXCH_D1.parquet',   # Химия
     'MOEXCN': 'MOEXCN_D1.parquet',   # Потребительский
     'MOEXIT': 'MOEXIT_D1.parquet',   # IT & TL
