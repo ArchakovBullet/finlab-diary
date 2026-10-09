@@ -4081,3 +4081,25 @@ HMM — не используем.
 ### Следующая сессия
 - train_ml_models.py с per-pair параметрами из config.
 - 3 пары: GD-PT_H4, BELU-NB_M10, SFIN-SH_M10.
+
+## 09.10.2026 — проверка оптимизации пар
+
+### Статус
+- weekly_pairs_optimization.py — ЗАКОММЕНТИРОВАН в cron. Не запускается.
+- reoptimize_fail_pairs.py — безопасен, не пишет в config.
+- check_pair_signals.py — пишет в pair_signals_state.json, не в config.
+- walk_forward_pairs*.py, walk_forward_5folds.py — только читают config.
+- update_config_coint.sh — ОПАСЕН, УСТАРЕЛ (6 пар, w=30/rw=60 для всех).
+  Не запускать: сломает 11 enabled, выключит 5 H4-пар.
+- pairs_optimizer.save_pair_config — пишет в config, вызывается только
+  weekly_pairs_optimization.py (отключён).
+
+### Правило
+- Любой скрипт, пишущий в pairs_config.json — только вручную, с бэкапом,
+  после walk-forward, с проверкой 11 пар + ML-пар.
+
+### Техдолг
+- weekly_pairs_optimization.py, update_config_coint.sh,
+  pairs_optimizer.save_pair_config — переписать под walk-forward + per-pair
+  + не трогать ML-пары (GD-PT_H4, BELU-NB_M10, SFIN-SH_M10).
+- Бэкап config: pairs_config.json.bak_20261009_224420.
