@@ -463,6 +463,11 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
     m['mean'] = m['spread'].rolling(window).mean()
     m['std'] = m['spread'].rolling(window).std()
     m['z'] = (m['spread'] - m['mean']) / m['std']
+    # Rolling correlation для ML-фильтра (совпадает с ml_pairs_lr.py)
+    if len(m) >= 50:
+        m['corr'] = m['close_a'].rolling(50).corr(m['close_b'])
+    else:
+        m['corr'] = None
 
     return {
         'current_zscore': float(m['z'].iloc[-1]) if len(m) > 0 and not pd.isna(m['z'].iloc[-1]) else 0.0,
@@ -471,6 +476,8 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
         'spread_trend': float(m['z'].iloc[-1] - m['z'].iloc[-2]) if len(m) > 1 and not pd.isna(m['z'].iloc[-1]) and not pd.isna(m['z'].iloc[-2]) else 0.0,
         'std': float(m['std'].iloc[-1]) if len(m) > 0 and not pd.isna(m['std'].iloc[-1]) else 0.0,
         'mean': float(m['mean'].iloc[-1]) if len(m) > 0 and not pd.isna(m['mean'].iloc[-1]) else 0.0,
+        'beta': float(m['beta'].iloc[-1]) if 'beta' in m.columns and len(m) > 0 and not pd.isna(m['beta'].iloc[-1]) else 0.0,
+        'corr': float(m['corr'].iloc[-1]) if 'corr' in m.columns and len(m) > 0 and m['corr'] is not None and not pd.isna(m['corr'].iloc[-1]) else 0.0,
     }
 
 
