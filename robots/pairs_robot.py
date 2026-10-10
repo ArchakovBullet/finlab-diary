@@ -1163,11 +1163,18 @@ def check_signals_by_tf(pairs_config, tf):
                         _signal = 'LONG_SPREAD'
 
                     if _signal is not None:
+                        # === CORR-ГЕЙТ перед ML ===
+                        # Защита от деградации корреляции: если corr < 0.5 — пропуск
+                        _corr_val = result.get('corr', 0.0)
+                        if _corr_val is not None and abs(_corr_val) < 0.5:
+                            print(f'  🚫 {pair_name}: corr={_corr_val:.2f} < 0.5 — пропуск (деградация)')
+                            continue
+
                         # ML-фильтр (только для пар с обученной моделью)
                         _ml_feats = {
                             'z': current_z,
                             'std': result.get('std', 0.0),
-                            'corr': result.get('corr', 0.0),
+                            'corr': _corr_val,
                             'spread_trend': spread_trend,
                             'beta': result.get('beta', 0.0),
                         }
