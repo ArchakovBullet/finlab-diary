@@ -27,6 +27,7 @@ ROOT = Path('/root/finlab')
 load_dotenv(ROOT / '.env')
 
 # Загружаем справочник стоимости пункта
+CONTRACT_POINTS_PATH = ROOT / 'robots' / 'contract_points.json'
 try:
     import json as _json
     with open(CONTRACT_POINTS_PATH, 'r') as _f:
@@ -557,14 +558,18 @@ def send_vk_message(message):
     return r.status_code == 200
 
 # ========== ЖУРНАЛ СДЕЛОК ==========
-def log_trade(pair_name, base_pair, tf, action, direction, volume, zscore, price_a, price_b, pnl=0):
-    """Записать сделку в SQLite"""
+def log_trade(pair_name, base_pair, tf, action, direction, volume, zscore, price_a, price_b, pnl=0, volume_a=None, volume_b=None):
+    """Записать сделку в SQLite."""
+    if volume_a is None:
+        volume_a = volume
+    if volume_b is None:
+        volume_b = volume
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO trades (pair_name, base_pair, timeframe, action, direction, volume, zscore, price_a, price_b, pnl, time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (pair_name, base_pair, tf, action, direction, volume, zscore, price_a, price_b, pnl, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        INSERT INTO trades (pair_name, base_pair, timeframe, action, direction, volume, zscore, price_a, price_b, pnl, time, volume_a, volume_b)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (pair_name, base_pair, tf, action, direction, volume, zscore, price_a, price_b, pnl, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), volume_a, volume_b))
     conn.commit()
     conn.close()
 
@@ -578,7 +583,7 @@ def get_open_positions():
     conn.close()
     return positions
 
-def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, price_b):
+def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, price_b, beta=1.0):
     """Открыть позицию (две ноги)"""
     ticker_a, ticker_b = base_pair.split('-')
     
@@ -595,6 +600,29 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
     if is_stock(_short_ticker):
         print(f'  ⏸️ {pair_name}: шорт по акции {_short_ticker} запрещён — пропуск')
         return
+
+    # === β-adjusted volume из % депозита ===
+    PAIR_PERCENT = 0.10  # 10% депозита на пару
+    pv_a = CONTRACT_POINTS.get(ticker_a, 1.0)
+    pv_b = CONTRACT_POINTS.get(ticker_b, 1.0)
+    pair_budget = DEPOSIT * PAIR_PERCENT
+    leg_budget = pair_budget / 2
+
+    if price_a * pv_a <= 0:
+        print(f'  ⏭️ {pair_name}: price_a * pv_a <= 0 — пропуск')
+        return
+    volume_a = int(leg_budget / (price_a * pv_a))
+
+    if beta and price_b * pv_b > 0:
+        volume_b = int(volume_a * abs(beta) * (price_a * pv_a) / (price_b * pv_b))
+    else:
+        volume_b = volume_a
+
+    if volume_a < 1 or volume_b < 1:
+        print(f'  ⏭️ {pair_name}: volume < 1 (a={volume_a}, b={volume_b}) — пропуск')
+        return
+
+    print(f'  📐 {pair_name}: volume_a={volume_a}, volume_b={volume_b} (β={beta:.2f}, budget={pair_budget:.0f}₽)')
     
     conn = sqlite3.connect(DB_PATH)
     # Получаем contract_code и expiry_date для обеих ног
@@ -622,21 +650,23 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
             pair_name, base_pair, timeframe, direction, volume, 
             entry_z, entry_time, entry_price_a, entry_price_b,
             leg_a_ticker, leg_a_direction, leg_b_ticker, leg_b_direction,
-            contract_code_a, contract_code_b, expiry_date_a, expiry_date_b
+            contract_code_a, contract_code_b, expiry_date_a, expiry_date_b,
+            volume_a, volume_b
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
-        pair_name, base_pair, tf, direction, volume, 
+        pair_name, base_pair, tf, direction, volume_a, 
         zscore, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
         price_a, price_b,
         ticker_a, leg_a_dir, ticker_b, leg_b_dir,
-        contract_code_a, contract_code_b, expiry_date_a, expiry_date_b
+        contract_code_a, contract_code_b, expiry_date_a, expiry_date_b,
+        volume_a, volume_b
     ))
     conn.commit()
     conn.close()
     
     # Журнал
-    log_trade(pair_name, base_pair, tf, 'OPEN', direction, volume, zscore, price_a, price_b)
+    log_trade(pair_name, base_pair, tf, 'OPEN', direction, volume_a, zscore, price_a, price_b, volume_a=volume_a, volume_b=volume_b)
     
     # VK
     emoji = '🔴' if direction == 'SHORT_SPREAD' else '🟢'
@@ -653,13 +683,13 @@ def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price
     cursor = conn.cursor()
 
     # Получаем параметры позиции
-    cursor.execute('SELECT direction, volume, entry_z, entry_price_a, entry_price_b, leg_a_ticker, leg_a_direction, leg_b_ticker, leg_b_direction FROM positions WHERE id = ?', (position_id,))
+    cursor.execute('SELECT direction, volume_a, volume_b, entry_z, entry_price_a, entry_price_b, leg_a_ticker, leg_a_direction, leg_b_ticker, leg_b_direction FROM positions WHERE id = ?', (position_id,))
     pos = cursor.fetchone()
     if not pos:
         conn.close()
         return
 
-    direction, volume, entry_z, entry_price_a, entry_price_b, leg_a_ticker, leg_a_direction, leg_b_ticker, leg_b_direction = pos
+    direction, volume_a, volume_b, entry_z, entry_price_a, entry_price_b, leg_a_ticker, leg_a_direction, leg_b_ticker, leg_b_direction = pos
 
     # Безопасная конвертация
     def safe_float(val, default=0.0):
@@ -683,19 +713,21 @@ def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price
     point_value_b = CONTRACT_POINTS.get(leg_b_ticker, 1.0) if leg_b_ticker else 1.0
 
     if leg_a_direction == 'SELL':
-        leg_a_pnl = (entry_price_a - price_a) * point_value_a * volume
+        leg_a_pnl = (entry_price_a - price_a) * point_value_a * volume_a
     else:
-        leg_a_pnl = (price_a - entry_price_a) * point_value_a * volume
+        leg_a_pnl = (price_a - entry_price_a) * point_value_a * volume_a
 
     if leg_b_direction == 'SELL':
-        leg_b_pnl = (entry_price_b - price_b) * point_value_b * volume
+        leg_b_pnl = (entry_price_b - price_b) * point_value_b * volume_b
     else:
-        leg_b_pnl = (price_b - entry_price_b) * point_value_b * volume
+        leg_b_pnl = (price_b - entry_price_b) * point_value_b * volume_b
 
     # Комиссия 0.28% (0.14% x 2) от номинала двух ног
-    notional_a = abs(entry_price_a) * point_value_a * volume
-    notional_b = abs(entry_price_b) * point_value_b * volume
-    commission = (notional_a + notional_b) * 0.0028
+    notional_a = abs(entry_price_a) * point_value_a * volume_a
+    notional_b = abs(entry_price_b) * point_value_b * volume_b
+    # Комиссия 0.05% (0.025% × 2) — реалистично для тарифа «Трейдер»
+    COMMISSION_RATE = 0.0005
+    commission = (notional_a + notional_b) * COMMISSION_RATE
     total_pnl = leg_a_pnl + leg_b_pnl - commission
 
     # PnL в пунктах (без учёта point_value)
@@ -725,7 +757,7 @@ def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price
     conn.close()
 
     # Журнал
-    log_trade(pair_name, base_pair, tf, 'CLOSE', direction, volume, zscore, price_a, price_b, total_pnl)
+    log_trade(pair_name, base_pair, tf, 'CLOSE', direction, volume_a, zscore, price_a, price_b, total_pnl, volume_a=volume_a, volume_b=volume_b)
 
     # VK
     emoji = '🟢' if total_pnl > 0 else '🔴'
@@ -1143,7 +1175,7 @@ def check_signals_by_tf(pairs_config, tf):
                         if _ml_pass:
                             if _ml_proba is not None:
                                 print(f'  🤖 ML PASS {pair_name}: proba={_ml_proba:.3f} → {_signal}')
-                            open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b)
+                            open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b, beta=result.get('beta', 1.0))
                         else:
                             print(f'  🚫 ML BLOCK {pair_name}: proba={_ml_proba:.3f} → {_signal} (z={current_z:+.2f})')
                 elif not _new_ok:

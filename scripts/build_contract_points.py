@@ -84,8 +84,9 @@ def main():
     stocks_cfg = set(cfg.get('stocks', []))
 
     # Тикеры из БД
-    db_tickers = get_tickers_from_dbs()
-    print(f'\nТикеров в БД: {len(db_tickers)}')
+    # Тикеры из tickers_config.json (НЕ из БД)
+    db_tickers = futures_cfg | stocks_cfg
+    print(f'\nТикеров из config: {len(db_tickers)}')
 
     # Загружаем кэш контрактов
     with open(CONTRACT_CACHE) as f:
@@ -131,7 +132,8 @@ def main():
             errors.append(f'{short} ({secid}): нет STEPPRICE/MINSTEP')
             continue
 
-        pv = round(step * minstep, 6)
+        # point_value = рублей за 1 пункт = STEPPRICE / MINSTEP
+        pv = round(step / minstep, 6) if minstep else step
         result[short] = pv
         print(f'  {short:<10} {secid:<10} STEP={step:<12} MINSTEP={minstep:<10} → {pv}')
 

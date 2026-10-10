@@ -4173,3 +4173,57 @@ HMM — не используем.
 
 ### Git
 - 31c6607 (HEAD) — до патчей.
+
+## 10.10.2026 — β-adjusted volume, комиссия 0.05%, point_value fix
+
+### 1. point_value fix
+- Формула в build_contract_points.py: `step × minstep` → `step / minstep`.
+- Тикеры: из tickers_config.json (166 фьючерсов + 138 акций), не из БД.
+- Пересобрано: 302 тикера.
+- GAZPF=100, SBERF=100, GLDRUBF=1.0, IMOEXF=10.0, GD=84.9, SV=849, BR=849.
+- Было: GAZPF=0.01 (в 10000 раз меньше). Исправлено.
+- CONTRACT_POINTS_PATH: определён (был не определён → CONTRACT_POINTS = {}).
+
+### 2. Комиссия 0.28% → 0.05%
+- COMMISSION_RATE = 0.0005.
+- Реалистично для тарифа «Трейдер».
+- PnL BANE-BN: +9.59₽ → +15.68₽ (комиссия 7.41 → 1.32₽).
+- Комиссия / PnL: 43% → 7.8%.
+
+### 3. β-adjusted volume из % депозита
+- PAIR_PERCENT = 0.10.
+- pair_budget = DEPOSIT * PAIR_PERCENT.
+- leg_budget = pair_budget / 2.
+- volume_a = int(leg_budget / (price_a * pv_a)).
+- volume_b = int(volume_a * |beta| * (price_a * pv_a) / (price_b * pv_b)).
+- Минимум 1, иначе пропуск.
+- open_position: сигнатура beta=1.0.
+- check_signals_by_tf: beta=result.get('beta', 1.0).
+- INSERT positions: volume_a, volume_b.
+- SELECT close_position: volume_a, volume_b.
+- PnL: раздельно по ногам.
+- notional: раздельно.
+- log_trade: принимает volume_a, volume_b (OPEN + CLOSE).
+
+### 4. positions / trades: новые колонки
+- positions: volume_a REAL DEFAULT 1.0, volume_b REAL DEFAULT 1.0.
+- trades: volume_a REAL DEFAULT 1.0, volume_b REAL DEFAULT 1.0.
+
+### 5. PnL проверка (ручная, акции)
+- BANE-BN: leg_a +22, leg_b -5, commission 1.32, total +15.68. ✅
+- BELU-NB: leg_a -2.6, leg_b +3, commission 1.47, total -1.07. ✅
+
+### 6. Бэкапы
+- Почищены: 240 → 93 → ~5.
+- backups/20260912/ — удалена.
+- backups/ — только systemd_units_current + crontab_new.
+- contract_points.json.bak_* — удалены (битые).
+
+### Git
+- 4c219ac (HEAD) — до патчей.
+
+### Техдолг
+- Тест β-adjusted: утром 07:00 МСК (когда time=True).
+- log_trade: volume (старая) — оставлена для совместимости.
+- Weekly + cron — следующий шаг.
+- AI-отчёты (daily/weekly) — следующий шаг.
