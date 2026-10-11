@@ -4330,3 +4330,41 @@ HMM — не используем.
 2. Пары "индекс + актив" (данные + cointegration).
 3. Half-life filter.
 4. Kalman filter.
+
+## 11.10.2026 (вс, вечер) — IPv4 fix для email
+
+### Проблема
+- Weekly (17:00 МСК) сработал, отчёт создан, но email НЕ ушёл:
+  `[Errno 101] Network is unreachable`.
+- Причина: getent hosts smtp.yandex.ru → IPv6 (2a02:6b8::19d).
+- Сервер имеет только IPv4 (eth0: fe80:: link-local). Python smtplib
+  резолвит IPv6 первым → Network is unreachable.
+
+### Решение
+- Форсировать IPv4 в send_email (ai_daily_report.py, ai_weekly_report.py):
+  _orig = socket.getaddrinfo
+  socket.getaddrinfo = lambda ...: _orig(host, port, socket.AF_INET, ...)
+- try/finally — восстановить getaddrinfo после.
+
+### Проверка
+- vsegpt: ('212.109.197.23', 443) — IPv4 ✅
+- yandex: ('77.88.21.158', 465) — IPv4 ✅
+- ai_daily_report.py — прогон без ошибки ✅
+- ai_weekly_report.py — прогон без ошибки ✅
+
+### DeepSeek нашёл (daily/weekly)
+1. «Неторговый день» — 20 повторов подряд.
+   Причина: time.sleep(3600) в цикле. Вс — неторговый. Норма, но можно
+   rate-limit (логировать раз в час/день).
+2. corr-гейт — не сработал для BELU-NB.
+   НО: corr-гейт добавлен 10.10 вечером. Сделка BELU-NB — 10.10 10:39,
+   ДО патча. С 11.10 — работает.
+3. Stale M10/H4 — разобрано (H4-агрегатор раз в день).
+
+### Git
+- 0b3a33c (HEAD).
+
+### Техдолг
+- «Неторговый день» — rate-limit (опционально).
+- Stale M10/H4 — разобрано.
+- Long-only / index+active / half-life — следующий research.

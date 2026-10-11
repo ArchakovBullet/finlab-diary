@@ -92,13 +92,20 @@ def call_vsegpt(model, system_prompt, user_content, api_key):
 
 
 def send_email(subject, body, email_from, email_pass, email_to):
-    msg = MIMEText(body, 'plain', 'utf-8')
-    msg['Subject'] = Header(subject, 'utf-8')
-    msg['From'] = email_from
-    msg['To'] = email_to
-    with smtplib.SMTP_SSL('smtp.yandex.ru', 465, timeout=30) as s:
-        s.login(email_from, email_pass)
-        s.send_message(msg)
+    import socket
+    # Форсируем IPv4 (сервер без глобального IPv6)
+    _orig = socket.getaddrinfo
+    socket.getaddrinfo = lambda host, port, family=0, type=0, proto=0, flags=0: _orig(host, port, socket.AF_INET, type, proto, flags)
+    try:
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = email_from
+        msg['To'] = email_to
+        with smtplib.SMTP_SSL('smtp.yandex.ru', 465, timeout=30) as s:
+            s.login(email_from, email_pass)
+            s.send_message(msg)
+    finally:
+        socket.getaddrinfo = _orig
 
 
 def main():
