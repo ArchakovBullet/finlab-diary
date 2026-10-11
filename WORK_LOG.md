@@ -4549,3 +4549,40 @@ HMM — не используем.
 ### Следующее
 - Проверить H4-агрегатор 12.10 16:30.
 - Research: long-only / Kalman / index+active.
+
+---
+
+## 2026-10-11 (вечер) — отключение GAZPF-SBERF_H4 + патч default enabled
+
+### Сделки 10.10 (первые реальные)
+- BANE-BN_M10: OPEN 10:29 → CLOSE 10:49, PnL = +9.59 ₽ ✅
+- BELU-NB_M10: OPEN 10:39 → CLOSE 13:19, PnL = -1.07 ₽ ❌
+- Итого за 10.10: **+8.52 ₽** на 2 сделках.
+- positions: 2 записи, обе CLOSED. open_positions=0 — корректно.
+
+### Баг _bp (08.10)
+- 9 срабатываний в сессии 2026-10-08 10:49:29.
+- Затронуты: SFIN-SH_M10, BANE-BN_M10, BELU-NB_M10, GAZPF-SBERF_H4, GD-SV_H4.
+- С 09.10 не воспроизводится. Устранён (предположительно при ML-патче).
+- Патч не требуется.
+
+### Отключение GAZPF-SBERF_H4
+- Причина: corr нестабильна (-0.20 → 0.36), коинтеграция разваливается.
+- last_optimized=None — пара без walk-forward.
+- enabled: True → False в pairs_config.json.
+- last_updated: 2026-10-11 22:45:00.
+- Итого enabled-пар: 10 (3×M10 + 7×H4).
+
+### Патч default enabled в pairs_robot.py
+- Строка 1050: default True → False (безопасность).
+- Без флага enabled пара теперь НЕ торгуется.
+- py_compile: OK.
+- Бэкап: robots/pairs_robot.py.bak_20261011_2244.
+
+### Git
+- Изменены: pairs_config.json, pairs_robot.py.
+- Следующее: commit + push в origin + diary.
+
+### Следующее
+- Проверить H4-агрегатор 12.10 16:30 МСК.
+- Research: long-only / Kalman / index+active.

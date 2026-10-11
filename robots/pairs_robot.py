@@ -1047,7 +1047,7 @@ def check_signals_by_tf(pairs_config, tf):
             continue
         
         # Проверка enabled (если отключена — пропускаем)
-        if pair_data.get('enabled', True) is False:
+        if pair_data.get('enabled', False) is False:
             continue
         
         base_pair = pair_name.replace(f'_{tf}', '')
