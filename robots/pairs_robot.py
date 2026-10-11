@@ -1114,12 +1114,7 @@ def check_signals_by_tf(pairs_config, tf):
                 _now_msk = _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=3)))
                 _hour = _now_msk.hour
                 _minute = _now_msk.minute
-                # H4-пары: торговля до 23:00 (H4-агрегатор обновляет данные в 20:45)
-                # M10/H1: 7:00-18:00 (вечерняя сессия малоликвидна)
-                if tf == 'H4':
-                    _is_trading_time = (7 <= _hour < 23)
-                else:
-                    _is_trading_time = (7 <= _hour < 18)
+                _is_trading_time = (7 <= _hour < 18)
                 
                 # Фильтр волатильности: только для простого spread
                 # (для cointegration residuals — не применять)
