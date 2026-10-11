@@ -4586,3 +4586,26 @@ HMM — не используем.
 ### Следующее
 - Проверить H4-агрегатор 12.10 16:30 МСК.
 - Research: long-only / Kalman / index+active.
+
+---
+
+## 2026-10-11 (финал сессии)
+
+### Проверки после push
+- finlab-robot.service: active.
+- enabled-пар: 10.
+- state: running=true, paused=false, open_positions=0.
+- git: working tree clean, синхронизировано с origin/master и diary/master.
+- HEAD: 4149a76.
+
+### Техдолг (на потом)
+- 21 старый бэкап (*.bak_* от 13.09–29.09) — почистить отдельной сессией.
+- README ссылается на 95b8fb4, актуальный HEAD — 4149a76.
+- Паспорт: HEAD и remote-список устарели.
+- last_check_m10/h1 в state — рудимент.
+- Метка «фильтры — time» в логе — переименовать в z_threshold.
+
+### План на 12.10 (пн)
+- 16:30 МСК — первый H4-агрегатор в рабочем режиме.
+- После 16:30 — проверить свежесть H4-свечей.
+- Research: long-only / Kalman / index+active.
