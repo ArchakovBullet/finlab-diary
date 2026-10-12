@@ -137,10 +137,11 @@ def main():
 
     # Даты для отчёта
     report_date = datetime.now()
-    data_date = report_date - timedelta(hours=args.hours)
+    data_date = report_date  # текущий день (вечерний отчёт)
     report_date_str = report_date.strftime('%Y-%m-%d')
     data_date_str = data_date.strftime('%Y-%m-%d')
     report_date_full = report_date.strftime('%d.%m.%Y')
+    report_time = report_date.strftime('%H:%M')
     data_date_full = data_date.strftime('%d.%m.%Y')
 
     user_content = f"""=== Контекст ===
@@ -161,8 +162,8 @@ def main():
 Формат:
 # Daily Report {report_date}
 
-Отчёт сформирован: {report_date_full}
-Анализ за период: {data_date_full} (последние {hours}ч)
+Отчёт сформирован: {report_date_full}, {report_time} МСК
+Анализ за {data_date_full} (текущий день, торговое окно закрыто)
 
 ## PnL и сделки
 - Открыто, закрыто, PnL, WR.
@@ -183,6 +184,7 @@ def main():
         report_date=report_date_str,
         report_date_full=report_date_full,
         data_date_full=data_date_full,
+        report_time=report_time,
         hours=args.hours,
     )
     r = call_vsegpt(args.model, system_prompt_fmt, user_content, api_key)
