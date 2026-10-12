@@ -135,6 +135,14 @@ def main():
     db_stats = read_db_stats(args.hours)
     context = read_context()
 
+    # Даты для отчёта
+    report_date = datetime.now()
+    data_date = report_date - timedelta(hours=args.hours)
+    report_date_str = report_date.strftime('%Y-%m-%d')
+    data_date_str = data_date.strftime('%Y-%m-%d')
+    report_date_full = report_date.strftime('%d.%m.%Y')
+    data_date_full = data_date.strftime('%d.%m.%Y')
+
     user_content = f"""=== Контекст ===
 {context}
 
@@ -151,7 +159,10 @@ def main():
     system_prompt = """Ты — аналитик FinLab. Составь ЕЖЕДНЕВНЫЙ отчёт.
 
 Формат:
-# Daily Report YYYY-MM-DD
+# Daily Report {report_date}
+
+Отчёт сформирован: {report_date_full}
+Анализ за период: {data_date_full} (последние {hours}ч)
 
 ## PnL и сделки
 - Открыто, закрыто, PnL, WR.
@@ -168,7 +179,13 @@ def main():
 Отвечай кратко, по делу, на русском."""
 
     print(f'📤 Отправка в VseGPT ({args.model})...')
-    r = call_vsegpt(args.model, system_prompt, user_content, api_key)
+    system_prompt_fmt = system_prompt.format(
+        report_date=report_date_str,
+        report_date_full=report_date_full,
+        data_date_full=data_date_full,
+        hours=args.hours,
+    )
+    r = call_vsegpt(args.model, system_prompt_fmt, user_content, api_key)
     if r.status_code != 200:
         print(f'ERROR: HTTP {r.status_code}')
         print(r.text[:500])
