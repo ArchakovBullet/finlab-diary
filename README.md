@@ -1,7 +1,7 @@
 # FinLabPy — Паспорт для AI-ассистента
 
-**Актуально на:** 11.10.2026
-**Commit:** `95b8fb4`
+**Актуально на:** 12.10.2026
+**Commit:** `e0370d8`
 **Сервер:** 159.194.219.117, `/root/finlab`
 **Python:** `/root/finlab/venv/bin/python`
 
@@ -23,9 +23,9 @@
 2. **WORK_LOG.md** — что происходит сейчас (роботы, тесты, задачи).
 
 **Ссылки (raw с commit hash — без кэша):**
-- README: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/95b8fb4/README.md`
-- WORK_LOG: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/95b8fb4/WORK_LOG.md`
-- MIGRATION_SUMMARY: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/95b8fb4/MIGRATION_SUMMARY.md`
+- README: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/e0370d8/README.md`
+- WORK_LOG: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/e0370d8/WORK_LOG.md`
+- MIGRATION_SUMMARY: `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/e0370d8/MIGRATION_SUMMARY.md`
 
 **Альтернативные URL (наш сервер, без CDN-кэша):**
 - http://159.194.219.117:8888/README.md
@@ -167,8 +167,8 @@
 
 - **GitHub (supercandles-data):** https://github.com/ArchakovBullet/supercandles-data
 - **GitHub (finlab-diary):** https://github.com/ArchakovBullet/finlab-diary
-- **WORK_LOG (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/95b8fb4/WORK_LOG.md`
-- **MIGRATION_SUMMARY (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/95b8fb4/MIGRATION_SUMMARY.md`
+- **WORK_LOG (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/e0370d8/WORK_LOG.md`
+- **MIGRATION_SUMMARY (raw):** `https://raw.githubusercontent.com/ArchakovBullet/supercandles-data/e0370d8/MIGRATION_SUMMARY.md`
 
 ---
 
