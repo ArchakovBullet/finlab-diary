@@ -4609,3 +4609,25 @@ HMM — не используем.
 - 16:30 МСК — первый H4-агрегатор в рабочем режиме.
 - После 16:30 — проверить свежесть H4-свечей.
 - Research: long-only / Kalman / index+active.
+
+---
+
+## 2026-10-12 (утро) — токен Algopack подтверждён
+
+### Algopack
+- Токен Algopack хранится в .env как MOEX_TOKEN (используется сборщиками).
+- Дублирующее имя ALGOPACK_APIKEY добавлено для новых скриптов.
+- Тест: obstats за 10.10 → 26104 строк. OK.
+- moexalgo установлен в venv.
+
+### Email
+- smtp.yandex.ru:465 и :587 → Network is unreachable.
+- smtp.beget.com:465 → OPEN (для сравнения).
+- Причина: инцидент в ЦОД Яндекса.
+- Письмо в поддержку Яндекса отправлено 12.10.
+- Ждём ответ. Fallback — VK (VK_TOKEN, VK_GROUP_ID есть в .env).
+
+### Следующее
+- Этап 1: scripts/ai_algopack_context.py — данные Algopack для AI.
+- VK-fallback для AI-отчётов (пока Яндекс не работает).
+- H4-агрегатор 12.10 16:30 МСК.
