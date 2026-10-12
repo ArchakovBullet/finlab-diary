@@ -163,7 +163,7 @@ def main():
 # Daily Report {report_date}
 
 Отчёт сформирован: {report_date_full}, {report_time} МСК
-Анализ за {data_date_full} (текущий день, торговое окно закрыто)
+Анализ за {data_date_full} (данные на {report_time} МСК, все TF закрыты)
 
 ## PnL и сделки
 - Открыто, закрыто, PnL, WR.
