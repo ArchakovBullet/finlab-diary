@@ -97,6 +97,27 @@ def call_vsegpt(model, system_prompt, user_content, api_key):
     return r
 
 
+def send_vk(subject, body):
+    """VK-fallback при ошибке email."""
+    vk_token = os.getenv('VK_TOKEN', '')
+    vk_group = os.getenv('VK_GROUP_ID', '')
+    if not vk_token or not vk_group:
+        return False
+    try:
+        import vk_api
+        vk = vk_api.VkApi(token=vk_token).get_api()
+        msg = f'{subject}\n\n{body[:3500]}'  # VK лимит ~4096
+        vk.messages.send(
+            peer_id=int(vk_group),
+            message=msg,
+            random_id=int(datetime.now().timestamp() * 1000),
+        )
+        return True
+    except Exception as e:
+        print(f'❌ VK ошибка: {e}')
+        return False
+
+
 def send_email(subject, body, email_from, email_pass, email_to):
     import socket
     # Форсируем IPv4 (сервер без глобального IPv6)
@@ -210,6 +231,9 @@ def main():
             print(f'✅ Email отправлен на {email_to}')
         except Exception as e:
             print(f'❌ Email ошибка: {e}')
+            print('📤 Пробую VK-fallback...')
+            if send_vk(subject, answer):
+                print('✅ VK-fallback отправлен')
 
     print()
     print('=' * 60)
