@@ -14,6 +14,29 @@
 - FutOI 1h/4h, HI2, Funding, MegaAlerts (304 файла), SuperCandles, Sector indices (13, MOEXTL делистингован).
 - Сборщики: cron ~25 заданий, все работают. Логи: logs/*_cron.log.
 
+## AI видит данные (ai_data_context.py)
+- scripts/ai_data_context.py — собирает реальный контекст данных.
+- Freshness: M10/H1/H4/D1 (кол-во свежих, oldest_h).
+- Config: enabled-пары, best_params.
+- Quarantine: state карантина (pairs_quarantine_state.json).
+- Algopack: futoi_1h, supercandles (свежесть).
+- Cron: ключевые задания.
+- AI НЕ должен доверять только логам — проверять freshness.
+
+## Известные мёртвые тикеры (12.10.2026)
+- 15 тикеров не обновлялись > 25ч:
+  BY, CRU6, CS, HK, I2, IN, JD, KZ, NO, PI, RF, SY, TY, UT, LQDT.
+- CRU6/PI/UT — 26 суток (делистинг?).
+- IN — 97.8ч (в паре SFIN-SH_M10 — риск!).
+- LQDT — бенчмарк, 47.8ч.
+- Робот торгует 9 парами, из них SFIN-SH_M10 содержит IN.
+
+## H4-агрегаторы (расписание)
+- candles_h4_aggregator.py: 30 13 * * * = 13:30 МСК (акции).
+- futures_h4_aggregator.py: 45 17 * * * = 17:45 МСК (фьючерсы).
+- supercandles_h4_aggregator.py: 40 17 * * * = 17:40 МСК (SuperCandles).
+- Паспорт говорил «16:30 МСК» — УСТАРЕЛО.
+
 ## Инфраструктура
 - VK-бот: алерты (freshness, memory, contracts, collector logs). check_* в cron.
 - DeepSeek (VseGPT): анализ логов, гипотезы. scripts/ai_diagnostic.py.
