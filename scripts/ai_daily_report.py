@@ -11,6 +11,7 @@ import smtplib
 import sqlite3
 import sys
 from datetime import datetime, timedelta
+import subprocess
 from email.mime.text import MIMEText
 from email.header import Header
 from pathlib import Path
@@ -165,7 +166,19 @@ def main():
     report_time = report_date.strftime('%H:%M')
     data_date_full = data_date.strftime('%d.%m.%Y')
 
-    user_content = f"""=== Контекст ===
+    # Собираем реальный контекст данных
+    try:
+        _dc = subprocess.check_output(
+            ['/root/finlab/venv/bin/python', '/root/finlab/scripts/ai_data_context.py'],
+            text=True, timeout=30,
+        )
+    except Exception as e:
+        _dc = f'{{"error": "{e}"}}'
+
+    user_content = f"""=== Данные (реальные, на {report_date.strftime('%H:%M')} МСК) ===
+{_dc}
+
+=== Контекст ==
 {context}
 
 === robot_state.json ===
