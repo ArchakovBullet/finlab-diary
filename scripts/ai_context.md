@@ -2,7 +2,7 @@
 
 ## Робот (pairs_robot.py)
 - Парная торговля, mean reversion (стиль Саймонса).
-- 11 enabled-пар: 3 M10 + 8 H4.
+- 9 enabled-пар: 3 M10 + 6 H4.
 - 3 ML-модели (Logistic Regression): GD-PT_H4 (AUC 0.678), BELU-NB_M10 (0.639), SFIN-SH_M10 (0.618).
 - 8 пар без ML (AUC < 0.6) — торгуют по z-score.
 - Комиссия 0.28% (0.14% × 2). MAX_POSITIONS=10, COOLDOWN_HOURS=4, MAX_HOLD_HOURS=120.
