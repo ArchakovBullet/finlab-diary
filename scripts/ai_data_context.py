@@ -105,17 +105,19 @@ def get_cron_summary():
 
 
 def get_trades_history(limit=20):
-    """Последние N закрытых сделок с метриками (z_entry + z_exit)."""
+    """Последние N закрытых сделок с метриками (z_entry + z_exit + правила)."""
     db = ROOT / 'robots' / 'pairs_robot.db'
     if not db.exists():
         return []
     try:
         conn = sqlite3.connect(str(db))
         cur = conn.cursor()
-        # Берём CLOSE-записи, для каждой ищем OPEN-запись по pair_name
         cur.execute("""
-            SELECT c.pair_name, c.direction, c.zscore AS z_exit, c.pnl, c.time AS time_exit,
-                   o.zscore AS z_entry, o.time AS time_entry
+            SELECT c.pair_name, c.base_pair, c.timeframe, c.direction,
+                   c.zscore AS z_exit, c.pnl, c.time AS time_exit,
+                   c.price_a AS price_a_exit, c.price_b AS price_b_exit,
+                   o.zscore AS z_entry, o.time AS time_entry,
+                   o.price_a AS price_a_entry, o.price_b AS price_b_entry
             FROM trades c
             LEFT JOIN trades o ON o.pair_name = c.pair_name
                 AND o.action = 'OPEN'
@@ -127,15 +129,54 @@ def get_trades_history(limit=20):
         """, (limit,))
         rows = cur.fetchall()
         conn.close()
-        return [
-            {'pair': r[0], 'direction': r[1],
-             'z_entry': r[5], 'z_exit': r[2],
-             'pnl': r[3],
-             'time_entry': r[6], 'time_exit': r[4]}
-            for r in rows
-        ]
+
+        # Загружаем config для правил (entry_z, exit_z)
+        config = {}
+        try:
+            c = json.load(open(CONFIG))
+            config = {k: v.get('best_params', {}) for k, v in c.get('pairs', {}).items()}
+        except Exception:
+            pass
+
+        result = []
+        for r in rows:
+            pair = r[0]
+            bp = config.get(pair, {})
+            result.append({
+                'pair': pair,
+                'base_pair': r[1],
+                'timeframe': r[2],
+                'direction': r[3],
+                'z_entry': r[9],
+                'z_exit': r[4],
+                'pnl': r[5],
+                'time_entry': r[10],
+                'time_exit': r[6],
+                'price_a_entry': r[11],
+                'price_b_entry': r[12],
+                'price_a_exit': r[7],
+                'price_b_exit': r[8],
+                'entry_z_rule': bp.get('entry_z'),
+                'exit_z_rule': bp.get('exit_z'),
+                'window': bp.get('window'),
+            })
+        return result
     except Exception as e:
         return [{'error': str(e)}]
+
+
+def get_rules():
+    """Правила торговли (вход/выход/ML/corr)."""
+    return {
+        'entry': 'Открытие: |z| >= entry_z (2.0-2.5, из config)',
+        'exit': 'Закрытие: |z| <= exit_z (0.5, из config)',
+        'ml_filter': 'ML: proba >= 0.5 → PASS, иначе BLOCK',
+        'corr_gate': 'Corr: |corr| >= 0.5, иначе пропуск',
+        'short_stock': 'Шорт по акциям запрещён',
+        'time_window': 'Торговля: 07:00-18:00 МСК (M10/H4)',
+        'cooldown': 'COOLDOWN_HOURS=4, MAX_HOLD_HOURS=120, MAX_POSITIONS=10',
+        'commission': '0.05% (0.0005) на ногу',
+    }
 
 
 def main():
@@ -148,6 +189,7 @@ def main():
         'algopack': get_algopack_summary(),
         'cron': get_cron_summary(),
         'trades_history': get_trades_history(limit=20),
+        'rules': get_rules(),
     }
     print(json.dumps(context, ensure_ascii=False, indent=2))
 

@@ -471,3 +471,21 @@
 
 ### Git
 - c7b0d31 (AI-отчёт v2).
+
+---
+
+## 2026-10-13 (день, доп. 2) — AI: полные данные для доверия
+
+### Принцип
+- AI не ошибается — он работает с тем, что дали.
+- Garbage in → garbage out.
+- Решение: полные данные + явный контекст + правила.
+
+### Что добавлено
+- trades_history: z_entry, z_exit, pnl, time, price_a/b, entry_z_rule, exit_z_rule, window.
+- rules: entry, exit, ml_filter, corr_gate, short_stock, time_window, cooldown, commission.
+- Промпт: "не додумывай", "проверяй поля".
+
+### Git
+- cd3b43b (z_entry + z_exit).
+- (после commit — v3).
