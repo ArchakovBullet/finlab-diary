@@ -451,3 +451,23 @@
 - Разобраться: почему z≈0.5 при entry=2.5 (сделки 10.10).
 - Проверить код входа (check_signals_by_tf).
 - Heartbeat в pairs_robot.py (state).
+
+---
+
+## 2026-10-13 (день, доп.) — разбор z-score: вход корректен
+
+### Факты
+- BANE-BN_M10: OPEN z=-3.55 (|z|>2.5 ✅), CLOSE z=+0.47 (|z|<0.5 ✅). PnL=+9.59.
+- BELU-NB_M10: OPEN z=-4.65 (|z|>2.5 ✅), CLOSE z=-0.046 (|z|<0.5 ✅). PnL=-1.07.
+- Баг отсутствует — вход и выход корректны.
+
+### Причина вопроса AI
+- AI смотрел z из CLOSE-записи (0.47), не из OPEN (-3.55).
+- trades содержит 2 записи (OPEN + CLOSE).
+
+### Улучшение
+- ai_data_context.py: get_trades_history → z_entry + z_exit (JOIN).
+- ai_daily_report.py: промпт объясняет z_entry (вход) vs z_exit (выход).
+
+### Git
+- c7b0d31 (AI-отчёт v2).

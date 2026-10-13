@@ -105,25 +105,33 @@ def get_cron_summary():
 
 
 def get_trades_history(limit=20):
-    """Последние N закрытых сделок с метриками."""
+    """Последние N закрытых сделок с метриками (z_entry + z_exit)."""
     db = ROOT / 'robots' / 'pairs_robot.db'
     if not db.exists():
         return []
     try:
         conn = sqlite3.connect(str(db))
         cur = conn.cursor()
+        # Берём CLOSE-записи, для каждой ищем OPEN-запись по pair_name
         cur.execute("""
-            SELECT pair_name, action, direction, zscore, pnl, time
-            FROM trades
-            WHERE action = 'CLOSE'
-            ORDER BY time DESC
+            SELECT c.pair_name, c.direction, c.zscore AS z_exit, c.pnl, c.time AS time_exit,
+                   o.zscore AS z_entry, o.time AS time_entry
+            FROM trades c
+            LEFT JOIN trades o ON o.pair_name = c.pair_name
+                AND o.action = 'OPEN'
+                AND o.time <= c.time
+            WHERE c.action = 'CLOSE'
+            GROUP BY c.id
+            ORDER BY c.time DESC
             LIMIT ?
         """, (limit,))
         rows = cur.fetchall()
         conn.close()
         return [
-            {'pair': r[0], 'direction': r[2], 'z': r[3],
-             'pnl': r[4], 'time': r[5]}
+            {'pair': r[0], 'direction': r[1],
+             'z_entry': r[5], 'z_exit': r[2],
+             'pnl': r[3],
+             'time_entry': r[6], 'time_exit': r[4]}
             for r in rows
         ]
     except Exception as e:
