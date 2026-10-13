@@ -12,6 +12,7 @@
   python scripts/ai_data_context.py  # JSON в stdout
 """
 import json
+import sqlite3
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -103,6 +104,32 @@ def get_cron_summary():
         return {'error': str(e)}
 
 
+def get_trades_history(limit=20):
+    """Последние N закрытых сделок с метриками."""
+    db = ROOT / 'robots' / 'pairs_robot.db'
+    if not db.exists():
+        return []
+    try:
+        conn = sqlite3.connect(str(db))
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT pair_name, action, direction, zscore, pnl, time
+            FROM trades
+            WHERE action = 'CLOSE'
+            ORDER BY time DESC
+            LIMIT ?
+        """, (limit,))
+        rows = cur.fetchall()
+        conn.close()
+        return [
+            {'pair': r[0], 'direction': r[2], 'z': r[3],
+             'pnl': r[4], 'time': r[5]}
+            for r in rows
+        ]
+    except Exception as e:
+        return [{'error': str(e)}]
+
+
 def main():
     now = datetime.now()
     context = {
@@ -112,6 +139,7 @@ def main():
         'quarantine': get_quarantine(),
         'algopack': get_algopack_summary(),
         'cron': get_cron_summary(),
+        'trades_history': get_trades_history(limit=20),
     }
     print(json.dumps(context, ensure_ascii=False, indent=2))
 
