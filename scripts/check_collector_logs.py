@@ -104,6 +104,34 @@ def check_recent_logs():
     
     return problems
 
+def format_problem(key):
+    """Форматирует ключ проблемы в читаемый вид: файл + тип ошибки."""
+    # key = "futoi_collect_cron.log:Traceback (most recent call last):"
+    if ':' in key:
+        fname, err = key.split(':', 1)
+    else:
+        fname, err = key, ''
+    # Определяем тип ошибки
+    err_lower = err.lower()
+    if 'nameresolution' in err_lower or 'temporary failure in name resolution' in err_lower:
+        err_type = 'DNS-сбой (NameResolutionError)'
+    elif 'maxretry' in err_lower:
+        err_type = 'MaxRetryError (сеть)'
+    elif 'connectionerror' in err_lower:
+        err_type = 'ConnectionError (сеть)'
+    elif 'timeout' in err_lower:
+        err_type = 'TimeoutError (таймаут)'
+    elif 'sslcert' in err_lower:
+        err_type = 'SSLCertVerificationError'
+    elif 'traceback' in err_lower:
+        err_type = 'Traceback (исключение)'
+    elif 'error' in err_lower or 'ошибка' in err_lower:
+        err_type = 'ERROR'
+    else:
+        err_type = err.strip()[:50]
+    return f'{fname} — {err_type}'
+
+
 def send_vk_message(msg):
     """Отправить сообщение в VK."""
     if not TOKEN:
@@ -144,13 +172,13 @@ if __name__ == '__main__':
 
     if new_problems:
         msg = f"⚠️ Обнаружены ошибки в логах сборщиков ({now_str}):\n"
-        msg += "\n".join(sorted(new_problems)[:10])
+        msg += "\n".join(f'  • {format_problem(k)}' for k in sorted(new_problems)[:10])
         print(msg)
         send_vk_message(msg)
 
     if recovered:
         msg = f"✅ Сборщики восстановлены ({now_str}):\n"
-        msg += "\n".join(sorted(recovered)[:10])
+        msg += "\n".join(f'  • {format_problem(k)}' for k in sorted(recovered)[:10])
         print(msg)
         send_vk_message(msg)
 
