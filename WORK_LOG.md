@@ -708,3 +708,34 @@
 - Проверить BANE-BN_M10 (z=-2.02).
 - Проверить SFIN-SH_M10 (z=-2.85).
 - НЕ снижать entry_z без walk-forward.
+
+---
+
+## 2026-10-14 (вечер, доп. 5) — НАХОДКА: signals неполный
+
+### Открытие
+- PD-SV_H4 (z=+2.55): сигнал есть, но нет записи в signals.
+- Причина: spread_trend <= 0 → _signal = None → нет логирования.
+- signals: 9 записей, все MISSED (time), 19:00.
+- Днём: записей нет (z < entry → continue до фильтров).
+
+### Что это значит
+- signals НЕ покрывает:
+  - z < entry → нет записи.
+  - _signal = None (spread_trend) → нет записи.
+- AI не видит эти случаи.
+
+### Решение
+- Логировать ВСЕ случаи:
+  - z < entry → MISSED (z_below_entry).
+  - _signal = None → MISSED (spread_trend).
+  - Фильтры → MISSED.
+  - ML → BLOCKED.
+  - EXECUTED.
+
+### Git
+- 931a10e.
+
+### Следующее
+- Патч: логировать z < entry и _signal = None.
+- Проверить spread_trend для PD-SV_H4.
