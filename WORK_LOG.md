@@ -1010,3 +1010,40 @@
 
 ### Git
 - f349da6.
+
+---
+
+## 2026-10-14 (финал) — итог дня
+
+### Сделано (v2 — экспериментальный)
+- Создан robots/pairs_robot_v2.py (копия v1 + правки).
+- robots/pairs_robot_v2.db.
+- FinLabPy/My_Indicators/pairs_config_v2.json.
+- /etc/systemd/system/finlab-robot-v2.service.
+- v2: active, paused=True (безопасно).
+
+### Правки в v2
+- DB_PATH → pairs_robot_v2.db.
+- CONFIG_PATH → pairs_config_v2.json.
+- STATE_FILE → robot_state_v2.json.
+- COMMAND_FILE → robot_command_v2.txt.
+- TF_FRESH_STATE_FILE → tf_fresh_state_v2.json.
+- _is_trading_time: 07:00-18:00 → 07:00-23:00.
+
+### Открытия дня
+- Сигналы z≥2.5: 4 записи (14.10 19:20-19:40), все MISSED (time).
+- Днём z≥2.5: нет.
+- corr: 0.90-0.94 — здоровые.
+- Логи пишутся (robot.log 1.4 МБ), но grep по дате не находит.
+- Config last_updated: 2026-10-12 19:22:24 (2 дня).
+
+### v1 (эталон) — НЕ ТРОГАЛИ
+- 9 enabled-пар, окно 07:00-18:00.
+
+### Следующее
+- M10-сборщик до 23:00 (для v2).
+- Наблюдение: v1 vs v2.
+- RESUME для v2 (когда решим).
+
+### Git
+- 0541be1.
