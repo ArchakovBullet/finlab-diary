@@ -179,6 +179,46 @@ def get_rules():
     }
 
 
+def get_signals_summary(hours=24):
+    """Сводка сигналов за N часов (executed, missed, blocked)."""
+    db = ROOT / 'robots' / 'pairs_robot.db'
+    if not db.exists():
+        return {}
+    try:
+        conn = sqlite3.connect(str(db))
+        cur = conn.cursor()
+        cutoff = (datetime.now() - __import__('datetime').timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+        # Общая статистика
+        cur.execute("""
+            SELECT status, reason, COUNT(*)
+            FROM signals
+            WHERE time >= ?
+            GROUP BY status, reason
+            ORDER BY COUNT(*) DESC
+        """, (cutoff,))
+        rows = cur.fetchall()
+        stats = [{'status': r[0], 'reason': r[1], 'count': r[2]} for r in rows]
+        # Топ-5 свежих
+        cur.execute("""
+            SELECT pair_name, status, reason, z, corr, time
+            FROM signals
+            WHERE time >= ?
+            ORDER BY time DESC
+            LIMIT 20
+        """, (cutoff,))
+        recent = cur.fetchall()
+        conn.close()
+        return {
+            'stats': stats,
+            'recent': [
+                {'pair': r[0], 'status': r[1], 'reason': r[2], 'z': r[3], 'corr': r[4], 'time': r[5]}
+                for r in recent
+            ],
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
 def main():
     now = datetime.now()
     context = {
@@ -190,6 +230,7 @@ def main():
         'cron': get_cron_summary(),
         'trades_history': get_trades_history(limit=20),
         'rules': get_rules(),
+        'signals_summary': get_signals_summary(hours=24),
     }
     print(json.dumps(context, ensure_ascii=False, indent=2))
 

@@ -822,3 +822,20 @@
 
 ### Git
 - acce2dc.
+
+---
+
+## 2026-10-14 (вечер, доп. 10) — ai_data_context: signals_summary
+
+### Что добавлено
+- get_signals_summary(hours=24): статистика сигналов.
+- stats: status + reason + count.
+- recent: топ-20 свежих сигналов.
+- Добавлено в context.
+
+### Текущее состояние signals
+- 39 записей, все MISSED (time) — 20:13, вне окна.
+- Это норма. Днём будут другие причины.
+
+### Git
+- 4783852 (close_position fix).
