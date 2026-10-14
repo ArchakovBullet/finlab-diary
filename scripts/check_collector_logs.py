@@ -170,22 +170,34 @@ if __name__ == '__main__':
     # Восстановленные (были, теперь нет)
     recovered = prev_problems - curr_problems
 
+    def uniq_formatted(keys):
+        seen = set()
+        result = []
+        for k in sorted(keys):
+            fp = format_problem(k)
+            if fp not in seen:
+                seen.add(fp)
+                result.append(fp)
+        return result
+
     if new_problems:
         msg = f"⚠️ Обнаружены ошибки в логах сборщиков ({now_str}):\n"
-        msg += "\n".join(f'  • {format_problem(k)}' for k in sorted(new_problems)[:10])
+        msg += "\n".join(f'  • {fp}' for fp in uniq_formatted(new_problems)[:10])
         print(msg)
         send_vk_message(msg)
 
     if recovered:
         msg = f"✅ Сборщики восстановлены ({now_str}):\n"
-        msg += "\n".join(f'  • {format_problem(k)}' for k in sorted(recovered)[:10])
+        msg += "\n".join(f'  • {fp}' for fp in uniq_formatted(recovered)[:10])
         print(msg)
         send_vk_message(msg)
 
-    # Сохраняем текущие проблемы в state
-    state['active_problems'] = sorted(curr_problems)
-    state['last_check'] = now_str
-    save_state(state)
+    # Сохраняем текущие проблемы в state (только active_problems + last_check)
+    new_state = {
+        'active_problems': sorted(curr_problems),
+        'last_check': now_str,
+    }
+    save_state(new_state)
 
     if not new_problems and not recovered:
         print(f'[{now_str}] Изменений нет. Активных проблем: {len(curr_problems)}')
