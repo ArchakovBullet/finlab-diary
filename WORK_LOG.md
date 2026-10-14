@@ -799,3 +799,26 @@
 
 ### Git
 - 1284a5b.
+
+---
+
+## 2026-10-14 (вечер, доп. 9) — Continue: разбор close_position, open_position
+
+### Критический баг (исправлен)
+- close_position: leg_a_pnl_points / leg_b_pnl_points использовали volume (не определена).
+- NameError при закрытии позиции.
+- Исправлено на volume_a / volume_b.
+- Баг НЕ проявлялся (сделок не было).
+
+### Баги Continue, которые НЕ подтвердились
+1. ml_filter: return True, None — это кортеж (не баг).
+2. open_position: leg_budget = pair_budget / 2 — β-adjusted (не баг).
+3. check_expiry: exp — проверка if not exp есть (не баг).
+4. check_time_exits: MAX_HOLD_HOURS — календарные часы (не баг).
+
+### Обсудить
+- open_position: leg_budget = pair_budget / 2 — β-adjusted.
+- check_time_exits: MAX_HOLD_HOURS — календарные vs торговые.
+
+### Git
+- acce2dc.

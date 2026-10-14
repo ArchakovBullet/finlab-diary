@@ -770,14 +770,14 @@ def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price
 
     # PnL в пунктах (без учёта point_value)
     if leg_a_direction == 'SELL':
-        leg_a_pnl_points = (entry_price_a - price_a) * volume
+        leg_a_pnl_points = (entry_price_a - price_a) * volume_a
     else:
-        leg_a_pnl_points = (price_a - entry_price_a) * volume
+        leg_a_pnl_points = (price_a - entry_price_a) * volume_a
 
     if leg_b_direction == 'SELL':
-        leg_b_pnl_points = (entry_price_b - price_b) * volume
+        leg_b_pnl_points = (entry_price_b - price_b) * volume_b
     else:
-        leg_b_pnl_points = (price_b - entry_price_b) * volume
+        leg_b_pnl_points = (price_b - entry_price_b) * volume_b
 
     total_pnl_points = leg_a_pnl_points + leg_b_pnl_points
 
