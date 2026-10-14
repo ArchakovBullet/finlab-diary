@@ -574,6 +574,43 @@ def log_trade(pair_name, base_pair, tf, action, direction, volume, zscore, price
     conn.close()
 
 # ========== ПОЗИЦИИ ==========
+
+
+def log_signal(pair_name, base_pair, tf, z, corr, beta, spread_trend,
+               signal_type, status, reason=None, ml_proba=None,
+               entry_z_rule=None, exit_z_rule=None, price_a=None, price_b=None):
+    """Записать сигнал в БД (EXECUTED / MISSED / BLOCKED)."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO signals
+            (pair_name, base_pair, timeframe, time, z, corr, beta, spread_trend,
+             signal_type, status, reason, ml_proba, entry_z_rule, exit_z_rule,
+             price_a, price_b)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            pair_name, base_pair, tf,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            z, corr, beta, spread_trend,
+            signal_type, status, reason, ml_proba,
+            entry_z_rule, exit_z_rule, price_a, price_b,
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f'  ⚠️ log_signal error: {e}')
+
+
+def skip_signal(pair_name, base_pair, tf, z, corr, beta, spread_trend,
+                signal_type, reason, ml_proba=None,
+                entry_z_rule=None, exit_z_rule=None, price_a=None, price_b=None):
+    """Записать пропущенный сигнал и вернуть True (для continue)."""
+    log_signal(pair_name, base_pair, tf, z, corr, beta, spread_trend,
+               signal_type, 'MISSED', reason, ml_proba,
+               entry_z_rule, exit_z_rule, price_a, price_b)
+    return True
+
 def get_open_positions():
     """Получить открытые позиции из БД"""
     conn = sqlite3.connect(DB_PATH)
@@ -1112,11 +1149,19 @@ def check_signals_by_tf(pairs_config, tf):
             # Проверка лимита позиций (контроль риска)
             if len(open_positions) >= MAX_POSITIONS:
                 print(f'  ⚠️ Лимит позиций ({MAX_POSITIONS}) — не открываем новые')
+                skip_signal(pair_name, base_pair, tf, current_z,
+                            result.get('corr', 0.0), result.get('beta', 0.0), spread_trend,
+                            None, 'MAX_POSITIONS', entry_z_rule=entry_z, exit_z_rule=exit_z,
+                            price_a=price_a, price_b=price_b)
                 continue
             
             # Проверка cooldown после убытка по паре
             if is_pair_in_cooldown(pair_name):
                 print(f'  ⏸️ {pair_name}: cooldown после убытка ({COOLDOWN_HOURS}ч)')
+                skip_signal(pair_name, base_pair, tf, current_z,
+                            result.get('corr', 0.0), result.get('beta', 0.0), spread_trend,
+                            None, 'COOLDOWN', entry_z_rule=entry_z, exit_z_rule=exit_z,
+                            price_a=price_a, price_b=price_b)
                 continue
             
             has_position = any(p[1] == pair_name and p[3] == tf for p in open_positions)
@@ -1171,6 +1216,11 @@ def check_signals_by_tf(pairs_config, tf):
                     if not _expiry_ok: _reasons.append('expiry')
                     if not _new_ok: _reasons.append('new_contract')
                     print(f'  ⛔ {pair_name}: фильтры — {", ".join(_reasons)} (z={current_z:+.2f})')
+                    skip_signal(pair_name, base_pair, tf, current_z,
+                                _corr_val, _beta, spread_trend,
+                                None, ','.join(_reasons),
+                                entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                price_a=price_a, price_b=price_b)
 
                 # Проверяем вход (с фильтрами)
                 if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:
@@ -1186,6 +1236,10 @@ def check_signals_by_tf(pairs_config, tf):
                         _corr_val = result.get('corr', 0.0)
                         if _corr_val is not None and abs(_corr_val) < 0.5:
                             print(f'  🚫 {pair_name}: corr={_corr_val:.2f} < 0.5 — пропуск (деградация)')
+                            skip_signal(pair_name, base_pair, tf, current_z,
+                                        _corr_val, result.get('beta', 0.0), spread_trend,
+                                        _signal, 'corr_gate', entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                        price_a=price_a, price_b=price_b)
                             continue
 
                         # ML-фильтр (только для пар с обученной моделью)
@@ -1200,9 +1254,20 @@ def check_signals_by_tf(pairs_config, tf):
                         if _ml_pass:
                             if _ml_proba is not None:
                                 print(f'  🤖 ML PASS {pair_name}: proba={_ml_proba:.3f} → {_signal}')
+                            # Записываем сигнал как EXECUTED
+                            log_signal(pair_name, base_pair, tf, current_z,
+                                       _corr_val, result.get('beta', 0.0), spread_trend,
+                                       _signal, 'EXECUTED', ml_proba=_ml_proba,
+                                       entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                       price_a=price_a, price_b=price_b)
                             open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b, beta=result.get('beta', 1.0))
                         else:
                             print(f'  🚫 ML BLOCK {pair_name}: proba={_ml_proba:.3f} → {_signal} (z={current_z:+.2f})')
+                            log_signal(pair_name, base_pair, tf, current_z,
+                                       _corr_val, result.get('beta', 0.0), spread_trend,
+                                       _signal, 'BLOCKED', reason='ML_BLOCK', ml_proba=_ml_proba,
+                                       entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                       price_a=price_a, price_b=price_b)
                 elif not _new_ok:
                     print(f'  ⏰ {pair_name}: новый контракт <3 дн. — не открываем')
                 elif not _expiry_ok:

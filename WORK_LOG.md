@@ -616,3 +616,22 @@
 
 ### Git
 - 2a0be61 (дедупликация).
+
+---
+
+## 2026-10-14 (вечер, доп.) — таблица signals: запись из pairs_robot.py
+
+### Что сделано
+- Таблица signals в pairs_robot.db (17 полей, 3 индекса).
+- log_signal() — запись сигнала.
+- skip_signal() — запись + continue.
+- Вызовы в check_signals_by_tf:
+  - MAX_POSITIONS → MISSED.
+  - COOLDOWN → MISSED.
+  - time/vol/corr/expiry/new → MISSED.
+  - corr < 0.5 → MISSED (corr_gate).
+  - ML BLOCK → BLOCKED.
+  - ML PASS → EXECUTED.
+
+### Git
+- a16c5f6 (heartbeat).
