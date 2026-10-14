@@ -512,3 +512,24 @@
 
 ### Git
 - cc362ef (AI v3).
+
+---
+
+## 2026-10-14 (день) — DNS-сбой (временный)
+
+### Проблема
+- 14.10 12:30 — NameResolutionError в futoi_collect_cron.log (4 раза).
+- Failed to resolve iss.moex.com (Temporary failure in name resolution).
+- Причина: DNS-сервер хостера 198.18.18.18 дал временный сбой.
+
+### Решение
+- DNS сменён на 8.8.8.8, 1.1.1.1, 8.8.4.4.
+- /etc/resolv.conf управляется cloud-init → отключено (manage_resolv_conf: false).
+- Сборщик FutOI перезапущен — 180 000 записей (OK).
+- futoi_1h.parquet: 15:05.
+
+### Техдолг
+- keyring_pass.cfg: token3 already exists (не критично).
+
+### Git
+- 92afae7 (AI v3).
