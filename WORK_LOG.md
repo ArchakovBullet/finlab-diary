@@ -898,3 +898,37 @@
 
 ### Git
 - 76012be.
+
+---
+
+## 2026-10-14 (вечер, доп. 15) — итог: что сделано, что осталось
+
+### Сделано (19 задач)
+- DNS, cloud-init, сборщики (симметрия, миграция, формат, дедупликация).
+- Heartbeat, signals, log_signal, skip_signal.
+- Патчи: continue, corr Series, beta non-coint, volume.
+- ai_data_context: signals_summary.
+- ai_weekly_report: свободный промпт + ai_data_context.
+- AI-weekly, AI-daily — разобраны.
+
+### Осталось
+**Приоритет 1:**
+1. signals неполный — днём z < entry не логируется. Патч.
+2. corr-гейт — проверить логику.
+
+**Приоритет 2:**
+3. Config — проверить (не обновлялся 2 дня).
+4. M10-сигналы днём — обсудить.
+5. Walk-forward — entry_z.
+
+**Приоритет 3:**
+6. v2 робот — эксперименты.
+7. pairs_screener.py.
+8. AI-veto.
+
+**Приоритет 4:**
+9. leg_budget — обсудить.
+10. MAX_HOLD_HOURS — обсудить.
+
+### Git
+- f5fa8b8.
