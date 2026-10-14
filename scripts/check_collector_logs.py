@@ -122,11 +122,38 @@ def send_vk_message(msg):
         print(f"❌ Ошибка VK: {e}")
 
 if __name__ == '__main__':
+    state = load_state()
     problems = check_recent_logs()
-    if problems:
-        msg = f"⚠️ Обнаружены ошибки в логах сборщиков ({datetime.now().strftime('%d.%m %H:%M')}):\n"
-        msg += "\n".join(problems[:10])
+    now_str = datetime.now().strftime('%d.%m %H:%M')
+
+    # Ошибки, которые были в state
+    prev_problems = set(state.get('active_problems', []))
+    curr_problems = set(problems)
+
+    # Новые проблемы
+    new_problems = curr_problems - prev_problems
+
+    # Восстановленные (были, теперь нет)
+    recovered = prev_problems - curr_problems
+
+    if new_problems:
+        msg = f"⚠️ Обнаружены ошибки в логах сборщиков ({now_str}):\n"
+        msg += "\n".join(sorted(new_problems)[:10])
         print(msg)
         send_vk_message(msg)
+
+    if recovered:
+        msg = f"✅ Сборщики восстановлены ({now_str}):\n"
+        msg += "\n".join(sorted(recovered)[:10])
+        print(msg)
+        send_vk_message(msg)
+
+    # Сохраняем текущие проблемы в state
+    state['active_problems'] = sorted(curr_problems)
+    state['last_check'] = now_str
+    save_state(state)
+
+    if not new_problems and not recovered:
+        print(f'[{now_str}] Изменений нет. Активных проблем: {len(curr_problems)}')
     else:
         print(f"✅ Ошибок в логах не обнаружено ({datetime.now().strftime('%d.%m %H:%M')})")
