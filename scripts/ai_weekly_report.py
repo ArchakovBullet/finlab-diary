@@ -9,6 +9,7 @@ import json
 import os
 import smtplib
 import sqlite3
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
@@ -128,34 +129,60 @@ def main():
     db_stats = read_db_stats(args.days)
     context = read_context()
 
-    user_content = f"""=== Контекст ===
-{context}
+    # Собираем реальный контекст данных
+    try:
+        _dc = subprocess.check_output(
+            ['/root/finlab/venv/bin/python', '/root/finlab/scripts/ai_data_context.py'],
+            text=True, timeout=60,
+        )
+    except Exception as e:
+        _dc = f'{{"error": "{e}"}}'
+
+    user_content = f"""=== ДАННЫЕ (РЕАЛЬНЫЕ, ИСТОЧНИК ИСТИНЫ) ===
+{_dc}
 
 === DB stats (за {args.days} дней) ===
 {json.dumps(db_stats, ensure_ascii=False, indent=2, default=str)}
 
-=== Daily-отчёты (за {args.days} дней) ===
+=== Контекст проекта ===
+{context}
+
+=== Daily-отчёты (ИСТОРИЧЕСКИЕ, за {args.days} дней) ===
 {daily}
 """
 
     system_prompt = """Ты — аналитик FinLab. Составь НЕДЕЛЬНЫЙ отчёт.
 
-Формат:
+ВАЖНО: в user_content есть раздел "ДАННЫЕ (РЕАЛЬНЫЕ)" — это источник истины.
+Он содержит:
+- freshness (свежесть данных);
+- config (enabled-пары, правила);
+- quarantine (карантин);
+- trades_history (сделки с z_entry, z_exit, PnL);
+- signals_summary (сигналы: EXECUTED / MISSED / BLOCKED с причинами);
+- rules (правила торговли);
+- cron (расписание).
+
+ПРАВИЛА:
+1. Если данные и логи противоречат — ВЕРЬ ДАННЫМ.
+2. Если данных нет — НЕ ДОДУМЫВАЙ.
+3. Анализируй свободно — не ограничивайся шаблоном.
+
+ЗАДАЧА:
+1. Какие условия данных благоприятствуют лучшим сделкам? (z, corr, beta, время, TF)
+2. Что мешало зайти в сделки, которые не состоялись? (причины MISSED / BLOCKED)
+3. Что нужно изменить, улучшить? — на твоё усмотрение.
+
+ФОРМАТ (гибкий, можешь добавлять свои разделы):
 # Weekly Report YYYY-WW
 
 ## PnL и сделки
-- Открыто, закрыто, PnL, WR за неделю.
+## Лучшие и худшие сделки (с паттернами)
+## Упущенные сигналы (причины, статистика)
+## Паттерны (что общего у прибыльных / убыточных)
+## Рекомендации (что изменить — на твоё усмотрение)
 
-## Топ-3 лучшие пары
-## Топ-3 худшие пары
-## ML-фильтр
-- PASS/BLOCK, статистика.
-
-## Аномалии
-## Рекомендации
-- 1-3 конкретных.
-
-Отвечай кратко, по делу, на русском."""
+Отвечай по делу, на русском. Будь конкретным."""
 
     print(f'📤 Отправка в VseGPT ({args.model})...')
     r = call_vsegpt(args.model, system_prompt, user_content, api_key)
