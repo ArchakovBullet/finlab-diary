@@ -915,6 +915,7 @@ def main():
 
     running = True
     last_check = {'M10': 0, 'H1': 0, 'H4': 0}
+    _last_heartbeat = time.time()  # для heartbeat раз в час
 
     while running:
         try:
@@ -987,6 +988,23 @@ def main():
                 if current_time - last_check[tf] >= interval:
                     check_signals_by_tf(pairs_config, tf)
                     last_check[tf] = current_time
+
+            # === HEARTBEAT: обновляем state.updated раз в час ===
+            _now = time.time()
+            if _now - _last_heartbeat >= 3600:
+                try:
+                    _hb_state = load_state()
+                    _hb_state['updated'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    _hb_state['running'] = True
+                    # Заполняем last_check_m10/h1 (вместо рудимента null)
+                    _hb_state['last_check_m10'] = datetime.fromtimestamp(last_check.get('M10', 0)).strftime('%Y-%m-%d %H:%M:%S') if last_check.get('M10') else None
+                    _hb_state['last_check_h1'] = datetime.fromtimestamp(last_check.get('H1', 0)).strftime('%Y-%m-%d %H:%M:%S') if last_check.get('H1') else None
+                    save_state(_hb_state)
+                    _last_heartbeat = _now
+                    print(f'💓 Heartbeat: state обновлён ({_hb_state["updated"]})')
+                except Exception as _e:
+                    print(f'  ⚠️ Heartbeat error: {_e}')
+                    _last_heartbeat = _now
 
             time.sleep(1)
 
