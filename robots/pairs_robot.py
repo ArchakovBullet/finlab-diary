@@ -517,6 +517,7 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
         m['spread'] = m['resid']
     else:
         m['spread'] = m['log_a'] - m['log_b']
+        m['beta'] = 1.0  # для non-coint пар beta = 1.0 (fallback)
 
     m['mean'] = m['spread'].rolling(window).mean()
     m['std'] = m['spread'].rolling(window).std()
@@ -525,7 +526,7 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
     if len(m) >= 50:
         m['corr'] = m['close_a'].rolling(50).corr(m['close_b'])
     else:
-        m['corr'] = None
+        m['corr'] = pd.Series([None] * len(m), index=m.index)
 
     return {
         'current_zscore': float(m['z'].iloc[-1]) if len(m) > 0 and not pd.isna(m['z'].iloc[-1]) else 0.0,
@@ -1221,6 +1222,7 @@ def check_signals_by_tf(pairs_config, tf):
                                 None, ','.join(_reasons),
                                 entry_z_rule=entry_z, exit_z_rule=exit_z,
                                 price_a=price_a, price_b=price_b)
+                    continue
 
                 # Проверяем вход (с фильтрами)
                 if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:

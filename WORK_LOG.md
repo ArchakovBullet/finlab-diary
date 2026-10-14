@@ -762,3 +762,20 @@
 - Исправить beta для non-coint (1.0 или close_a/close_b).
 - Добавить continue после skip_signal.
 - Исправить corr = None.
+
+---
+
+## 2026-10-14 (вечер, доп. 7) — исправлены баги Continue
+
+### Уточнение по beta
+- Все 9 enabled-пар: use_coint=True.
+- beta=0.0 — только для non-coint пар (их нет в enabled).
+- Баг НЕ проявляется сейчас, но исправлен на будущее.
+
+### Исправлено
+1. continue после skip_signal в фильтрах (строка ~1219).
+2. corr = None → pd.Series([None] * len(m)).
+3. beta = 1.0 для non-coint пар (fallback).
+
+### Git
+- 0952f63.
