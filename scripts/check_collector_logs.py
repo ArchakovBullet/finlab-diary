@@ -127,7 +127,13 @@ if __name__ == '__main__':
     now_str = datetime.now().strftime('%d.%m %H:%M')
 
     # Ошибки, которые были в state
-    prev_problems = set(state.get('active_problems', []))
+    # Если active_problems нет — мигрируем из старых ключей (исключая служебные)
+    if 'active_problems' not in state:
+        prev_problems = set(k for k in state.keys()
+                           if k not in ('active_problems', 'last_check'))
+        print(f'ℹ️ Миграция state: {len(prev_problems)} старых проблем')
+    else:
+        prev_problems = set(state.get('active_problems', []))
     curr_problems = set(problems)
 
     # Новые проблемы
