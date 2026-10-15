@@ -13,6 +13,7 @@
 """
 import json
 import sqlite3
+import pandas as pd
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -219,6 +220,60 @@ def get_signals_summary(hours=24):
         return {'error': str(e)}
 
 
+def get_robot_state_v2():
+    """Состояние v2-робота (paused, running, updated)."""
+    state_file = ROOT / 'robots' / 'robot_state_v2.json'
+    if not state_file.exists():
+        return None
+    try:
+        return json.load(open(state_file))
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_trades_history_v2(limit=20):
+    """История сделок v2 (positions CLOSED)."""
+    db = ROOT / 'robots' / 'pairs_robot_v2.db'
+    if not db.exists():
+        return []
+    try:
+        conn = sqlite3.connect(db)
+        df = pd.read_sql_query(f'SELECT pair_name, direction, entry_z, exit_z, entry_time, exit_time, pnl FROM positions WHERE status="CLOSED" ORDER BY id DESC LIMIT {limit}', conn)
+        conn.close()
+        return df.to_dict(orient='records')
+    except Exception as e:
+        return [{'error': str(e)}]
+
+
+def get_signals_summary_v2(hours=24):
+    """Сводка сигналов v2 за N часов."""
+    db = ROOT / 'robots' / 'pairs_robot_v2.db'
+    if not db.exists():
+        return {'stats': [], 'recent': []}
+    try:
+        conn = sqlite3.connect(db)
+        stats = pd.read_sql_query(f"""
+            SELECT status, reason, COUNT(*) as cnt
+            FROM signals
+            WHERE time > datetime('now','-{hours} hours')
+            GROUP BY status, reason
+            ORDER BY cnt DESC
+        """, conn)
+        recent = pd.read_sql_query(f"""
+            SELECT time, pair_name, timeframe, z, corr, status, reason
+            FROM signals
+            ORDER BY id DESC
+            LIMIT 20
+        """, conn)
+        conn.close()
+        return {
+            'stats': stats.to_dict(orient='records'),
+            'recent': recent.to_dict(orient='records'),
+        }
+    except Exception as e:
+        return {'error': str(e), 'stats': [], 'recent': []}
+
+
 def main():
     now = datetime.now()
     context = {
@@ -231,6 +286,9 @@ def main():
         'trades_history': get_trades_history(limit=20),
         'rules': get_rules(),
         'signals_summary': get_signals_summary(hours=24),
+        'robot_state_v2': get_robot_state_v2(),
+        'trades_history_v2': get_trades_history_v2(limit=20),
+        'signals_summary_v2': get_signals_summary_v2(hours=24),
     }
     print(json.dumps(context, ensure_ascii=False, indent=2))
 

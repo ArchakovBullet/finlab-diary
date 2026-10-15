@@ -542,10 +542,11 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
 
 
 def send_vk_message(message):
-    """Отправить сообщение в VK"""
+    """Отправить сообщение в VK (v2)"""
     if not VK_TOKEN:
         print("❌ VK_TOKEN не настроен")
         return False
+    message = "[v2] " + message
     
     url = 'https://api.vk.com/method/messages.send'
     params = {
@@ -991,6 +992,22 @@ def main():
             if state.get('paused', True):
                 check_expiry()
                 check_time_exits()
+                # === HEARTBEAT в paused-режиме: обновляем state.updated раз в час ===
+                _now_p = time.time()
+                if _now_p - _last_heartbeat >= 3600:
+                    try:
+                        _hb_state = load_state()
+                        _hb_state['updated'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        _hb_state['running'] = True
+                        _hb_state['paused'] = True
+                        _hb_state['last_check_m10'] = datetime.fromtimestamp(last_check.get('M10', 0)).strftime('%Y-%m-%d %H:%M:%S') if last_check.get('M10') else None
+                        _hb_state['last_check_h1'] = datetime.fromtimestamp(last_check.get('H1', 0)).strftime('%Y-%m-%d %H:%M:%S') if last_check.get('H1') else None
+                        save_state(_hb_state)
+                        _last_heartbeat = _now_p
+                        print(f'💓 Heartbeat (paused): state обновлён ({_hb_state["updated"]})')
+                    except Exception as _e:
+                        print(f'  ⚠️ Heartbeat (paused) error: {_e}')
+                        _last_heartbeat = _now_p
                 # Проверяем команды каждые 5 сек (быстрая реакция на RESUME)
                 _paused_exit = False
                 for _ in range(12):  # 12 × 5 = 60 сек
@@ -1270,6 +1287,15 @@ def check_signals_by_tf(pairs_config, tf):
                                        _signal, 'BLOCKED', reason='ML_BLOCK', ml_proba=_ml_proba,
                                        entry_z_rule=entry_z, exit_z_rule=exit_z,
                                        price_a=price_a, price_b=price_b)
+                    else:
+                        # z не дотянул до entry_z (или spread_trend не совпал) — логируем
+                        print(f'  💤 {pair_name}: z={current_z:+.2f} — ниже entry_z={entry_z} (spread_trend={spread_trend:+.2f})')
+                        skip_signal(pair_name, base_pair, tf, current_z,
+                                    _corr_val, _beta, spread_trend,
+                                    None, 'z_below_entry',
+                                    entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                    price_a=price_a, price_b=price_b)
+                        continue
                 elif not _new_ok:
                     print(f'  ⏰ {pair_name}: новый контракт <3 дн. — не открываем')
                 elif not _expiry_ok:

@@ -1047,3 +1047,73 @@
 
 ### Git
 - 0541be1.
+
+---
+
+## 2026-10-15 (вечер) — v2 запущен: полная интеграция в инфраструктуру
+
+### Контекст
+- v2 (pairs_robot_v2, окно 07:00-23:00) создан 14.10, но `paused=True` (безопасно).
+- Задача: интегрировать v2 в дашборд, AI-daily, ВК-бот; запустить.
+
+### Патчи (по одному, с проверкой)
+
+**Патч 1 (P0): heartbeat v2 в paused-режиме.**
+- Проблема: при `paused=True` v2 не обновлял `robot_state_v2.json` (heartbeat вне paused-блока).
+- Решение: heartbeat в paused-блоке (раз в час).
+- Проверка: тестовый режим 60 сек → `💓 Heartbeat (paused)` → откат на 3600.
+
+**Патч 2 (P1): z_below_entry в v1 (pairs_robot.py).**
+- Проблема: днём при `|z| < entry_z` сигнал не логировался (только `time` — вечером).
+- Решение: `else: skip_signal(z_below_entry); continue` после ML-блока.
+
+**Патч 3.1/3.2/3.3 (P2): v2 в дашборде.**
+- Таб «📊 Парная торговля_v2» (radio).
+- v2 в `_robots_stats` (Обзор).
+- Кнопки Старт/Пауза/Стоп (RESUME/PAUSE/STOP).
+- Фикс: `_v2_db` перемещён выше кнопок (NameError).
+
+**Патч 4.1 (ВК-бот): префикс [v2] в уведомлениях.**
+- Проблема: v2 слал в тот же чат, что v1, без пометки.
+- Решение: `message = "[v2] " + message` в `send_vk_message`.
+- Проверка: тестовое сообщение `[v2] тест №2`.
+
+**Патч 5/5.1 (AI-daily): v2 в контексте.**
+- `get_robot_state_v2()`, `get_trades_history_v2()`, `get_signals_summary_v2()`.
+- Ключи в JSON: `robot_state_v2`, `trades_history_v2`, `signals_summary_v2`.
+- Фикс: `import pandas as pd` (NameError).
+
+**Патч 5.2 (дашборд): finlab-robot-v2 в «Активных роботов».**
+
+**Патч 2.1 (v2): z_below_entry.**
+
+### Config
+- `last_updated` обновлён (15.10 20:33) в v1 и v2.
+
+### Очистка v2.db
+- Удалены унаследованные positions (2) и trades (4) от v1 (10.10).
+- signals v2 (48 записей) сохранены.
+
+### RESUME v2
+- `echo "RESUME" > robot_command_v2.txt`.
+- `paused: false`, `▶️ RESUME: торговля возобновлена`.
+- Лог: `💤 z_below_entry` работает.
+
+### Состояние v2
+- signals: 48 (все MISSED time — от 14.10).
+- positions: 0, trades: 0.
+- state: `paused=False, running=True`.
+
+### Открытия
+- BR-GAZPF_H4: corr=0.29 (нестабильный, колеблется 0.29-0.76).
+- LK-IMOEXF_H4: corr=0.44 (< 0.5, близко к порогу).
+- EURRUBF_M10.parquet: разовая ошибка (race с cron), файл валиден.
+
+### Следующее
+- Наблюдение v2 (30-60 мин): signals, EXECUTED/BLOCKED, ВК [v2].
+- Завтра днём: проверка z_below_entry (v1 и v2).
+- BR-GAZPF_H4: решение (исключить или наблюдать).
+- Walk-forward по entry_z.
+
+### Git
+- (будет после commit)

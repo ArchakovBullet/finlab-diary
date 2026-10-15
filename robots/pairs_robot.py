@@ -1270,6 +1270,15 @@ def check_signals_by_tf(pairs_config, tf):
                                        _signal, 'BLOCKED', reason='ML_BLOCK', ml_proba=_ml_proba,
                                        entry_z_rule=entry_z, exit_z_rule=exit_z,
                                        price_a=price_a, price_b=price_b)
+                    else:
+                        # z не дотянул до entry_z (или spread_trend не совпал) — логируем
+                        print(f'  💤 {pair_name}: z={current_z:+.2f} — ниже entry_z={entry_z} (spread_trend={spread_trend:+.2f})')
+                        skip_signal(pair_name, base_pair, tf, current_z,
+                                    _corr_val, _beta, spread_trend,
+                                    None, 'z_below_entry',
+                                    entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                    price_a=price_a, price_b=price_b)
+                        continue
                 elif not _new_ok:
                     print(f'  ⏰ {pair_name}: новый контракт <3 дн. — не открываем')
                 elif not _expiry_ok:
