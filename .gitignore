@@ -82,3 +82,4 @@ robots/*_command.txt
 robots/*_state.json
 robots/__pycache__/
 .env.broken*
+robots/robot_command_v2.txt
