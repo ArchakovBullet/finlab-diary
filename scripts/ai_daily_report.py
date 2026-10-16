@@ -129,7 +129,9 @@ def send_email(subject, body, email_from, email_pass, email_to):
         msg['Subject'] = Header(subject, 'utf-8')
         msg['From'] = email_from
         msg['To'] = email_to
-        with smtplib.SMTP_SSL('smtp.yandex.ru', 465, timeout=30) as s:
+        # Пробуем 587 (STARTTLS)
+        with smtplib.SMTP('smtp.yandex.ru', 587, timeout=30) as s:
+            s.starttls()
             s.login(email_from, email_pass)
             s.send_message(msg)
     finally:
