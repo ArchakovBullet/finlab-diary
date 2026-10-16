@@ -1117,3 +1117,122 @@
 
 ### Git
 - (будет после commit)
+
+---
+
+## 2026-10-16 (вечер) — ремонты, EXECUTED-фикс, walk-forward, эксперимент v2
+
+### Ремонты инфраструктуры
+
+**A. check_collector_logs.py (критично).**
+- Было: `TypeError: strptime() argument 1 must be str, not list` — мониторинг сборщиков сломан.
+- Фикс A.1: `isinstance(v, str)`.
+- Фикс A.2: `_is_recent_date(v)` с `try/except` (формат `14.10 16:09`).
+- Результат: `Активных проблем: 0` — работает.
+
+**B. hi2_daily_aggregator.py.**
+- Было: `ColumnNotFoundError: unable to find column "ticker"`.
+- Фикс: `if 'ticker' not in df.columns and 'secid' in df.columns: df = df.rename({'secid': 'ticker'})`.
+- Результат: 225 тикеров, 10644 строк.
+
+**C. check_memory.py — VK API.**
+- Было: `VkApiMethod.__call__() takes 1 positional argument but 3 were given`.
+- Фикс: переписан на `requests.post` + `load_dotenv` + `import requests`.
+- Тест: `тест check_memory VK (v2)` — ушёл в ВК.
+
+**D. check_contract_changes.py — VK API.**
+- Было: `[15] Access denied: token required`.
+- Фикс: `load_dotenv` уже был — **не требовалось**.
+- Тест: `Изменений контрактов не обнаружено` — работает.
+
+**E. ai_daily_report.py — email.**
+- Было: `Connection refused` (порт 465).
+- Фикс: 465 → 587 (STARTTLS).
+- Тест: email `FinLab тест email` — ушёл.
+
+**F. tradestats_collector.py — retry.**
+- Было: 70 ConnectionError.
+- Фикс: retry 3→5, backoff 0.5→1.0, +429.
+
+**G. futoi_collector.py — DNS retry + sys.path.**
+- Было: `NameResolutionError` (DNS), `ModuleNotFoundError: MOEXPy`.
+- Фикс: явный `import requests` + retry-сессия + `sys.path.insert(0, project_root / 'FinLabPy')`.
+- Тест: `Готово! Всего новых записей: 180000`.
+
+### EXECUTED-фикс (v1 + v2)
+
+- Было: `log_signal('EXECUTED')` — **до** `open_position`. Если `open_position` возвращался (шорт запрещён, price <= 0, volume < 1) — signals говорил EXECUTED, но позиции нет.
+- Фикс: `open_position` возвращает `True/False`. `log_signal('EXECUTED')` — только при `_opened == True`. Иначе — `BLOCKED (open_failed)`.
+- Результат: `py_compile OK` (v1, v2).
+
+### Walk-forward entry_z
+
+- Создан `scripts/walk_forward_entry_z.py` — перебор entry_z (1.5, 2.0, 2.5, 3.0) на 9 enabled-парах (5 фолдов).
+- **Результаты:**
+
+| TF | entry_z | n | pnl | wr | sharpe |
+|---|---|---|---|---|---|
+| H4 | 1.5 | 1054 | 9.54 | 0.78 | 9.93 |
+| H4 | 2.0 | 669 | 7.28 | 0.79 | 12.49 |
+| H4 | 2.5 | 376 | 5.23 | 0.81 | **16.66** |
+| H4 | 3.0 | 160 | 2.66 | 0.76 | 14.66 |
+| M10 | 1.5 | 1044 | **-1.08** | **0.22** | **-8.24** |
+| M10 | 2.0 | 440 | 0.11 | 0.42 | 0.58 |
+| M10 | 2.5 | 152 | 0.33 | 0.69 | 12.93 |
+| M10 | 3.0 | 61 | 0.32 | 0.77 | 15.78 |
+
+- **Вывод:** M10 — убыточен при entry_z < 2.5. H4 — прибыльный при всех. M10 и H4 — разные стратегии.
+- Лучший entry_z по каждой паре (по Sharpe): SFIN-SH=3.0, BANE-BN=3.0, BELU-NB=2.5, GD-SV=3.0, PD-SV=3.0, PT-SV=3.0, GD-PT=3.0, BR-GAZPF=2.5, LK-IMOEXF=2.5.
+
+### Диагностика: почему 0 сделок
+
+- signals v2: `MISSED z_below_entry` — 314 (195 при z<1.0, 59 при 1.0–1.5, 41 при 1.5–2.0, 19 при 2.0–2.5, 0 при ≥2.5).
+- signals v2: `MISSED time` — 204, `MISSED corr_gate` — 7, `BLOCKED ML_BLOCK` — 2, `EXECUTED` — 1 (ложный).
+- **Гипотеза `spread_trend` — опровергнута:** `z_below_entry при |z| ≥ 2.5 = 0` (v1, v2).
+- **Реальная причина:** `entry_z=2.5` — высок. z почти всегда < 2.5.
+
+### Эксперимент v2 (на v2 — эксперименты, v1 — эталон)
+
+**Изменения в config v2:**
+- M10 → entry_z=2.0 (было 2.5): SFIN-SH, BANE-BN, BELU-NB.
+- BR-GAZPF_H4 → enabled=false (corr=0.20 — мёртвая).
+
+**Итог v2:**
+- 8 enabled-пар (было 9).
+- M10: 2.0. H4: 2.5/2.0.
+- BR-GAZPF_H4 — выключен.
+
+**Итог v1 (эталон — не тронут):**
+- 9 enabled-пар.
+- M10: 2.5. H4: 2.5/2.0.
+- BR-GAZPF_H4 — enabled.
+
+**Разница v1 vs v2:**
+- M10: v1=2.5, v2=2.0.
+- BR-GAZPF_H4: v1=enabled, v2=false.
+- Окно: v1=07:00–18:00, v2=07:00–23:00.
+
+### Открытия
+
+- **BR-GAZPF_H4: corr нестабилен** — 0.52 → 0.29 → 0.76 → 0.20.
+- **LK-IMOEXF_H4: corr нестабилен** — 0.91 → 0.44 → 0.96 → 0.44.
+- **pairs_quarantine.py — только v1** (`robot.log`, `pairs_config.json`). v2 — без карантина.
+- **ENTRY_Z_DEFAULT = 3.0** в коде, но **не используется** (у всех пар свой entry_z в config).
+
+### Git
+
+- `17f44c9` — .gitignore (robot_state_v2.json).
+- `b147d47` — ремонты, EXECUTED-фикс, walk-forward, v2 эксперимент.
+- `1371005` — ai_daily_report (email 587).
+- Все — в `origin` + `diary`.
+
+### Следующее (через 1-2 дня)
+
+- **Замер v2:** signals, positions, trades. Есть ли EXECUTED?
+- **Если 0 EXECUTED** → Эксперимент 2: M10 → 1.5.
+- **LK-IMOEXF_H4** — наблюдать (corr=0.44).
+- **pairs_quarantine.py** — адаптировать для v2.
+- **v1 — не трогать.**
+
+### Git
+- (после commit)
