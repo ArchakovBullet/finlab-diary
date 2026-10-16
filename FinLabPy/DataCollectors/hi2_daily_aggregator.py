@@ -54,6 +54,8 @@ def aggregate_all():
             pl.col('value').filter(pl.col('metric') == m).last().alias(m)
             for m in METRICS
         ]
+        if 'ticker' not in df.columns and 'secid' in df.columns:
+            df = df.rename({'secid': 'ticker'})
         daily = df.group_by(['ticker', 'engine', 'tradedate']).agg(agg_exprs)
         
         all_rows.append(daily)

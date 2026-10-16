@@ -15,9 +15,9 @@ from urllib3.util.retry import Retry
 # Создаём сессию с retry
 session = requests.Session()
 retry = Retry(
-    total=3,
-    backoff_factor=0.5,
-    status_forcelist=[500, 502, 503, 504],
+    total=5,
+    backoff_factor=1.0,
+    status_forcelist=[500, 502, 503, 504, 429],
     allowed_methods=["GET"]
 )
 adapter = HTTPAdapter(max_retries=retry)

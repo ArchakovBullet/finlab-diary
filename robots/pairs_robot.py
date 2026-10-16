@@ -637,7 +637,7 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
     _short_ticker = ticker_a if leg_a_dir == 'SELL' else ticker_b
     if is_stock(_short_ticker):
         print(f'  ⏸️ {pair_name}: шорт по акции {_short_ticker} запрещён — пропуск')
-        return
+        return False
 
     # === β-adjusted volume из % депозита ===
     PAIR_PERCENT = 0.10  # 10% депозита на пару
@@ -648,7 +648,7 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
 
     if price_a * pv_a <= 0:
         print(f'  ⏭️ {pair_name}: price_a * pv_a <= 0 — пропуск')
-        return
+        return False
     volume_a = int(leg_budget / (price_a * pv_a))
 
     if beta and price_b * pv_b > 0:
@@ -658,7 +658,7 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
 
     if volume_a < 1 or volume_b < 1:
         print(f'  ⏭️ {pair_name}: volume < 1 (a={volume_a}, b={volume_b}) — пропуск')
-        return
+        return False
 
     print(f'  📐 {pair_name}: volume_a={volume_a}, volume_b={volume_b} (β={beta:.2f}, budget={pair_budget:.0f}₽)')
     
@@ -714,6 +714,7 @@ def open_position(pair_name, base_pair, tf, direction, volume, zscore, price_a, 
     message += f"  Нога B: {leg_b_dir} {ticker_b} @ {price_b:.2f}"
     send_vk_message(message)
     print(f"✅ Открыта позиция: {message}")
+    return True
 
 def close_position(position_id, pair_name, base_pair, tf, zscore, price_a, price_b):
     """Закрыть позицию (двухногая модель)"""
@@ -1257,12 +1258,19 @@ def check_signals_by_tf(pairs_config, tf):
                             if _ml_proba is not None:
                                 print(f'  🤖 ML PASS {pair_name}: proba={_ml_proba:.3f} → {_signal}')
                             # Записываем сигнал как EXECUTED
-                            log_signal(pair_name, base_pair, tf, current_z,
-                                       _corr_val, result.get('beta', 0.0), spread_trend,
-                                       _signal, 'EXECUTED', ml_proba=_ml_proba,
-                                       entry_z_rule=entry_z, exit_z_rule=exit_z,
-                                       price_a=price_a, price_b=price_b)
-                            open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b, beta=result.get('beta', 1.0))
+                            _opened = open_position(pair_name, base_pair, tf, _signal, VOLUME, current_z, price_a, price_b, beta=result.get('beta', 1.0))
+                            if _opened:
+                                log_signal(pair_name, base_pair, tf, current_z,
+                                           _corr_val, result.get('beta', 0.0), spread_trend,
+                                           _signal, 'EXECUTED', ml_proba=_ml_proba,
+                                           entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                           price_a=price_a, price_b=price_b)
+                            else:
+                                log_signal(pair_name, base_pair, tf, current_z,
+                                           _corr_val, result.get('beta', 0.0), spread_trend,
+                                           _signal, 'BLOCKED', reason='open_failed', ml_proba=_ml_proba,
+                                           entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                           price_a=price_a, price_b=price_b)
                         else:
                             print(f'  🚫 ML BLOCK {pair_name}: proba={_ml_proba:.3f} → {_signal} (z={current_z:+.2f})')
                             log_signal(pair_name, base_pair, tf, current_z,

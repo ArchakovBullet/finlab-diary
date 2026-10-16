@@ -99,7 +99,14 @@ def check_recent_logs():
     for key in new_errors:
         state[key] = now.strftime('%Y-%m-%d %H:%M:%S')
     # Очищаем state от ошибок старше 24 часов
-    state = {k: v for k, v in state.items() if (now - datetime.strptime(v, '%Y-%m-%d %H:%M:%S')).days < 1}
+    def _is_recent_date(v):
+        if not isinstance(v, str):
+            return False
+        try:
+            return (now - datetime.strptime(v, '%Y-%m-%d %H:%M:%S')).days < 1
+        except ValueError:
+            return False
+    state = {k: v for k, v in state.items() if _is_recent_date(v)}
     save_state(state)
     
     return problems

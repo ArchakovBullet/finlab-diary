@@ -228,7 +228,7 @@
       "pair_name": "SFIN-SH_M10",
       "best_params": {
         "window": 30,
-        "entry_z": 2.5,
+        "entry_z": 2.0,
         "exit_z": 0.5,
         "resid_window": 60,
         "use_coint": true
@@ -454,7 +454,7 @@
       "pair_name": "BANE-BN_M10",
       "best_params": {
         "window": 30,
-        "entry_z": 2.5,
+        "entry_z": 2.0,
         "exit_z": 0.5,
         "resid_window": 60,
         "use_coint": true
@@ -568,7 +568,7 @@
       "pair_name": "BELU-NB_M10",
       "best_params": {
         "window": 30,
-        "entry_z": 2.5,
+        "entry_z": 2.0,
         "exit_z": 0.5,
         "resid_window": 60,
         "use_coint": true
@@ -2705,7 +2705,7 @@
       }
     },
     "BR-GAZPF_H4": {
-      "enabled": true,
+      "enabled": false,
       "best_params": {
         "entry_z": 2.0,
         "exit_z": 0.5,
@@ -2735,5 +2735,5 @@
       }
     }
   },
-  "last_updated": "2026-10-15 20:34:24"
+  "last_updated": "2026-10-16 (experiment: quarantine BR-GAZPF_H4)"
 }

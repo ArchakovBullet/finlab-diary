@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Мониторинг заполнения памяти сервера с уведомлением в VK."""
+import requests
 import os
 import shutil
 import sys
@@ -127,14 +128,24 @@ def check_memory():
     
     return None
 
-def send_vk_message(vk, peer_id, message):
-    """Отправить сообщение в VK"""
+def send_vk_message(peer_id, message):
+    """Отправить сообщение в VK через API (как в роботах)."""
     try:
-        vk.messages.send(**{
-            'peer_id': peer_id,
-            'message': message,
-            'random_id': int(datetime.now().timestamp() * 1000)
-        })
+        response = requests.post(
+            'https://api.vk.com/method/messages.send',
+            params={
+                'access_token': TOKEN,
+                'peer_id': peer_id,
+                'message': message,
+                'random_id': int(datetime.now().timestamp() * 1000),
+                'v': '5.131'
+            },
+            timeout=10
+        )
+        result = response.json()
+        if 'error' in result:
+            print(f"❌ VK API error: {result['error']}")
+            return False
         return True
     except Exception as e:
         print(f"❌ Ошибка отправки: {e}")
@@ -159,7 +170,7 @@ if __name__ == '__main__':
     if message:
         print(f"\n{message}")
         # Отправить админу
-        if send_vk_message(vk, ADMIN_ID, message):
+        if send_vk_message(ADMIN_ID, message):
             print("✅ Уведомление отправлено в VK")
     else:
         print("\n✅ Память в норме")

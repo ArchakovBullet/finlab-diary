@@ -7,9 +7,19 @@ import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 import polars as pl
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Retry-сессия (DNS/сеть)
+_session = requests.Session()
+_retry = Retry(total=5, backoff_factor=1.0, status_forcelist=[500,502,503,504,429], allowed_methods=["GET"])
+_session.mount('https://', HTTPAdapter(max_retries=_retry))
+_session.mount('http://', HTTPAdapter(max_retries=_retry))
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / 'FinLabPy'))
 
 from MOEXPy.MOEXPy import MOEXPy
 from FinLabPy.Utils import setup_logger
@@ -43,7 +53,7 @@ def _resolve_full_code(short_code):
         return cache[short_code]["code"]
     try:
         url = "https://iss.moex.com/iss/engines/futures/markets/forts/securities.json"
-        r = requests.get(url, timeout=10)
+        r = _session.get(url, timeout=10)
         data = r.json()["securities"]
         cols = data["columns"]
         rows = data["data"]
