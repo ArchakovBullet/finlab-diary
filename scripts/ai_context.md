@@ -80,3 +80,26 @@
 - Прод: парный робот (наблюдение, ML-фильтр).
 - Приоритет 2: ML-фильтр — ✅ завершён.
 - Разведка: купонная лестница + парковщик, дивидендный календарь, lead-lag A/B.
+
+## ВАЖНО: v1 vs v2 (с 16.10.2026)
+
+**v1 — ЭТАЛОН:**
+- БД: robots/pairs_robot.db
+- State: robots/robot_state.json
+- Config: pairs_config.json (9 enabled-пар, M10=2.5)
+- Окно: 07:00–18:00 МСК
+- НЕ ТРОГАТЬ.
+
+**v2 — ЭКСПЕРИМЕНТ:**
+- БД: robots/pairs_robot_v2.db
+- State: robots/robot_state_v2.json
+- Config: pairs_config_v2.json (8 enabled-пар, M10=2.0, BR-GAZPF_H4 off)
+- Окно: 07:00–23:00 МСК
+- Эксперименты — только здесь.
+
+**ПРАВИЛА ОТЧЁТА:**
+1. РАЗЛИЧАЙ v1 и v2. Указывай [v1] или [v2] в каждом пункте.
+2. Не смешивай PnL, signals, trades, config v1 и v2.
+3. Если EXECUTED, но positions/trades пусты — проверь open_failed (шорт запрещён).
+4. corr_gate применяется к СИГНАЛАМ, не к enabled.
+5. Если данных нет — пиши «нет данных», не додумывай.

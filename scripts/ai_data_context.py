@@ -274,10 +274,52 @@ def get_signals_summary_v2(hours=24):
         return {'error': str(e), 'stats': [], 'recent': []}
 
 
+def get_legend():
+    """Легенда: v1 vs v2, поля signals, роботы. Чтобы AI не смешивал."""
+    return {
+        'robots': {
+            'pairs_v1': {
+                'name': '📊 Парная торговля',
+                'db': 'robots/pairs_robot.db',
+                'state': 'robots/robot_state.json',
+                'config': 'FinLabPy/My_Indicators/pairs_config.json',
+                'window': '07:00–18:00 МСК',
+                'role': 'ЭТАЛОН. Не трогать. Сравнивать с v2.',
+            },
+            'pairs_v2': {
+                'name': '📊 Парная торговля_v2',
+                'db': 'robots/pairs_robot_v2.db',
+                'state': 'robots/robot_state_v2.json',
+                'config': 'FinLabPy/My_Indicators/pairs_config_v2.json',
+                'window': '07:00–23:00 МСК',
+                'role': 'ЭКСПЕРИМЕНТ. M10=2.0 (было 2.5). BR-GAZPF_H4 off. НЕ смешивать с v1.',
+            },
+            'futures_algopack_v1': {'name': '📊 Робот фьючерсов (Algopack)', 'db': 'futures_algopack_robot.db'},
+            'futures_algopack_v2': {'name': '📊 Робот фьючерсов (v2)', 'db': 'futures_algopack_robot_v2.db'},
+            'stocks': {'name': '📈 Робот акций (TradeStats)', 'db': 'tradestats_stocks_robot.db'},
+        },
+        'signals_fields': {
+            'MISSED': 'сигнал не открыт. reason: time (вне окна), z_below_entry (|z|<entry_z), corr_gate (corr<0.5), MAX_POSITIONS, COOLDOWN.',
+            'BLOCKED': 'сигнал отклонён ML-фильтром (ML_BLOCK) ИЛИ open_position (open_failed: шорт запрещён, price<=0, volume<1).',
+            'EXECUTED': 'сигнал прошёл фильтры И открыл позицию. Если EXECUTED, но positions/trades пусты — проверить лог (short_forbidden).',
+        },
+        'filters': {
+            'time': 'окно 07:00–18:00 (v1) / 07:00–23:00 (v2).',
+            'corr_gate': 'corr < 0.5 — пропуск. Применяется к СИГНАЛАМ, не к enabled.',
+            'ML_BLOCK': 'ML-модель отклонила (proba < порог).',
+            'short_forbidden': 'шорт акции запрещён (BANE, BELU и др.) — SHORT_SPREAD пропускается.',
+            'open_failed': 'open_position вернул False (шорт запрещён, price<=0, volume<1).',
+        },
+        'pairs_vs_futures': 'pairs (v1, v2) — парная торговля акция+фьючерс. futures-algopack (v1, v2) — одиночные фьючерсы. stocks — акции.',
+        'rule': 'РАЗЛИЧАЙ v1 и v2. Указывай [v1] или [v2]. Не смешивай их PnL, signals, trades, config.',
+    }
+
+
 def main():
     now = datetime.now()
     context = {
         'generated_at': now.strftime('%Y-%m-%d %H:%M:%S'),
+        'legend': get_legend(),
         'freshness': get_freshness(),
         'config': get_config(),
         'quarantine': get_quarantine(),
