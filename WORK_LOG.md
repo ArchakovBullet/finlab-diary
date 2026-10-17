@@ -1236,3 +1236,73 @@
 
 ### Git
 - (после commit)
+
+---
+
+## 2026-10-17 (вечер) — DD/SY, candles_collector, AI-легенда, эксперимент 2
+
+### Удаление DD, SY (АДР)
+
+- **DD** — фьючерс на PDD Holdings (АДР, Китай). **SY** — фьючерс на Sony Group (АДР).
+- В `tickers_config.json` — в `futures` (166 → 164).
+- Данные: DD_M10 — последние 2026-07-29, SY_M10 — 2026-07-27. **Не обновлялись ~2.5 месяца.**
+- **Удалено:** из `tickers_config.json` + файлы (M10, H1, H4, D1) → `data/candles/_trash/`.
+
+### candles_collector.py — sys.path
+
+- **Проблема:** `ModuleNotFoundError: MOEXPy` при ручном запуске (нет `PYTHONPATH`). В cron — работает.
+- **Фикс:** `sys.path.insert(0, str(project_root / 'FinLabPy'))`.
+- **Результат:** ручной запуск — работает.
+
+### candles_collect_cron.log — 0 байт
+
+- **Проблема:** лог — 0 байт (с 10.10).
+- **Причина:** candles_collector пишет логи в `logs/2026-10-17_candles_collector.log` (13 MB, свежий).
+- **Фикс:** пустой `candles_collect_cron.log` — удалён.
+
+### Патч 8.1 — AI-легенда (ai_data_context.py)
+
+- **Проблема:** AI-daily не различает v1/v2. Смешивает signals, config, entry_z.
+- **Фикс:** `get_legend()` — v1 (эталон), v2 (эксперимент), поля signals, фильтры, правило «различай v1/v2».
+- **Результат:** JSON — `legend` есть. AI-daily увидит.
+
+### Патч 8.2 — AI-инструкция (ai_context.md)
+
+- **Добавлено:** v1 vs v2 (БД, state, config, окно), правила отчёта:
+  1. Различай v1/v2.
+  2. Не смешивай PnL, signals, trades, config.
+  3. EXECUTED без positions/trades — проверь open_failed.
+  4. corr_gate — к сигналам, не к enabled.
+  5. Нет данных — пиши «нет данных».
+- **Результат:** ai_context.md — 105 строк (было 82).
+
+### Эксперимент 2 — M10 → 1.8 (v2)
+
+- **Config v2:** M10 → 1.8 (SFIN-SH, BANE-BN, BELU-NB). H4 — 2.5/2.0.
+- **v2:** рестарт, `paused: false`.
+- **Лог:** `entry=1.8` — применён.
+- **Signals:** M10 — `z_below_entry` (z 0.2–1.0 — ниже 1.8). H4 — `z_below_entry`.
+- **НО:** z — мал. Даже 1.8 — высок. Ждём 1-2 дня.
+
+### AI-daily за 17.10 — разбор
+
+- **Верно:** 0 сделок, D1/M10 — «мёртвые», H4 — норма, паттерны сделок.
+- **Ошибки:** смешивает v1/v2 (signals, config, entry_z). «161 из 298 D1 не обновлялись» — **неверно** (D1 обновлён 17.10 10:01, «несвежие» — «мёртвые»).
+- **Вывод:** Патч 8.1/8.2 — нужен. Сделано.
+
+### Git
+
+- `4b6cc56` — DD/SY удалены, candles_collector sys.path, AI-легенда.
+- `ceccdc9` — .gitignore (tf_fresh_state_v2.json).
+- `8cf54b3` — Эксперимент 2 (M10=1.8, v2).
+- Все — в `origin` + `diary`.
+
+### Следующее (через 1-2 дня)
+
+- **Замер v2:** signals, positions, trades. EXECUTED / open_failed.
+- **Если 0 EXECUTED** → Эксперимент 3: M10 → 1.5.
+- **AI-daily** — проверить, различает ли v1/v2 (после Патча 8.1/8.2).
+- **v1 — не трогать.**
+
+### Git
+- (после commit)
