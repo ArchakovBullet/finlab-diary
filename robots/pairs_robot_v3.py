@@ -26,6 +26,28 @@ from dotenv import load_dotenv
 ROOT = Path('/root/finlab')
 load_dotenv(ROOT / '.env')
 
+import numpy as np
+
+
+def kalman_beta(y, x, delta=1e-4, R=1e-3):
+    """Кальман для beta: y = beta * x + eps."""
+    n = len(y)
+    beta = np.zeros(n)
+    P = np.zeros(n)
+    beta[0] = 1.0
+    P[0] = 1.0
+    Q = delta
+    for t in range(1, n):
+        beta_pred = beta[t-1]
+        P_pred = P[t-1] + Q
+        H = x[t]
+        S = H * P_pred * H + R
+        K = P_pred * H / S
+        beta[t] = beta_pred + K * (y[t] - H * beta_pred)
+        P[t] = (1 - K * H) * P_pred
+    return beta
+
+
 # Загружаем справочник стоимости пункта
 CONTRACT_POINTS_PATH = ROOT / 'robots' / 'contract_points.json'
 try:
@@ -410,18 +432,24 @@ def init_db():
             pair_name TEXT NOT NULL,
             base_pair TEXT NOT NULL,
             timeframe TEXT NOT NULL,
-            direction TEXT NOT NULL,  -- LONG_SPREAD / SHORT_SPREAD
+            direction TEXT NOT NULL,
             volume REAL NOT NULL,
             entry_z REAL NOT NULL,
             entry_time TEXT NOT NULL,
             entry_price_a REAL,
             entry_price_b REAL,
-            status TEXT DEFAULT 'OPEN',  -- OPEN / CLOSED
+            status TEXT DEFAULT 'OPEN',
             exit_time TEXT,
             exit_z REAL,
             exit_price_a REAL,
             exit_price_b REAL,
-            pnl REAL DEFAULT 0
+            pnl REAL DEFAULT 0,
+            leg_a_ticker TEXT, leg_a_direction TEXT, leg_b_ticker TEXT, leg_b_direction TEXT,
+            leg_a_pnl REAL DEFAULT 0, leg_b_pnl REAL DEFAULT 0,
+            leg_a_pnl_points REAL, leg_b_pnl_points REAL, total_pnl_points REAL,
+            contract_code_a TEXT, contract_code_b TEXT,
+            expiry_date_a TEXT, expiry_date_b TEXT,
+            volume_a REAL DEFAULT 1.0, volume_b REAL DEFAULT 1.0
         )
     ''')
     
@@ -432,17 +460,44 @@ def init_db():
             pair_name TEXT NOT NULL,
             base_pair TEXT NOT NULL,
             timeframe TEXT NOT NULL,
-            action TEXT NOT NULL,  -- OPEN / CLOSE
+            action TEXT NOT NULL,
             direction TEXT,
             volume REAL,
             zscore REAL,
             price_a REAL,
             price_b REAL,
             pnl REAL DEFAULT 0,
-            time TEXT NOT NULL
+            time TEXT NOT NULL,
+            volume_a REAL DEFAULT 1.0, volume_b REAL DEFAULT 1.0
         )
     ''')
     
+    # Таблица сигналов
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS signals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pair_name TEXT NOT NULL,
+            base_pair TEXT NOT NULL,
+            timeframe TEXT NOT NULL,
+            time TEXT NOT NULL,
+            z REAL,
+            corr REAL,
+            beta REAL,
+            spread_trend REAL,
+            signal_type TEXT,
+            status TEXT NOT NULL,
+            reason TEXT,
+            ml_proba REAL,
+            entry_z_rule REAL,
+            exit_z_rule REAL,
+            price_a REAL,
+            price_b REAL
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_time ON signals(time)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_pair ON signals(pair_name)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)')
+
     conn.commit()
     conn.close()
     print("✅ БД инициализирована")
@@ -469,7 +524,7 @@ def calculate_correlation(df_a, df_b, window=20):
         return None
 
 
-def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
+def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60, use_kalman=False):
     """Z-score спреда.
 
     Если use_coint=True — rolling OLS residuals:
@@ -487,6 +542,30 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
     m['close_b'] = m['close_b'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
     m['log_a'] = np.log(m['close_a'].replace(0, np.nan))
     m['log_b'] = np.log(m['close_b'].replace(0, np.nan))
+
+    if use_kalman:
+        # Kalman beta (адаптивная)
+        beta_kalman = kalman_beta(m['log_a'].values, m['log_b'].values)
+        m['beta'] = beta_kalman
+        m['spread'] = m['log_a'] - beta_kalman * m['log_b']
+        m['mean'] = m['spread'].rolling(window).mean()
+        m['std'] = m['spread'].rolling(window).std()
+        m['z'] = (m['spread'] - m['mean']) / m['std']
+        # Rolling correlation для ML-фильтра
+        if len(m) >= 50:
+            m['corr'] = m['close_a'].rolling(50).corr(m['close_b'])
+        else:
+            m['corr'] = pd.Series([None] * len(m), index=m.index)
+        return {
+            'current_zscore': float(m['z'].iloc[-1]) if len(m) > 0 and not pd.isna(m['z'].iloc[-1]) else 0.0,
+            'price_a': float(m['close_a'].iloc[-1]),
+            'price_b': float(m['close_b'].iloc[-1]),
+            'spread_trend': float(m['z'].iloc[-1] - m['z'].iloc[-2]) if len(m) > 1 and not pd.isna(m['z'].iloc[-1]) and not pd.isna(m['z'].iloc[-2]) else 0.0,
+            'std': float(m['std'].iloc[-1]) if len(m) > 0 and not pd.isna(m['std'].iloc[-1]) else 0.0,
+            'mean': float(m['mean'].iloc[-1]) if len(m) > 0 and not pd.isna(m['mean'].iloc[-1]) else 0.0,
+            'beta': float(m['beta'].iloc[-1]) if 'beta' in m.columns and len(m) > 0 and not pd.isna(m['beta'].iloc[-1]) else 0.0,
+            'corr': float(m['corr'].iloc[-1]) if 'corr' in m.columns and len(m) > 0 and m['corr'] is not None and not pd.isna(m['corr'].iloc[-1]) else 0.0,
+        }
 
     if use_coint:
         # Rolling OLS residuals
@@ -1153,7 +1232,8 @@ def check_signals_by_tf(pairs_config, tf):
             # Z-score (с поддержкой cointegration residuals)
             result = calculate_zscore(df_a, df_b, window=window,
                                       use_coint=use_coint,
-                                      resid_window=resid_window)
+                                      resid_window=resid_window,
+                                      use_kalman=True)
             if not result:
                 continue
             

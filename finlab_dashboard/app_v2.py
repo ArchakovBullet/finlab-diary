@@ -4120,7 +4120,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
+        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -4169,6 +4169,27 @@ elif page == "📊 Торговые роботы":
                 'pnl': _pairs_v2_pnl,
                 'wr': _pairs_v2_wr,
                 'db': _pairs_v2_db,
+                'is_pairs': True,
+            }
+
+        # Парный робот v3 (эксперимент: Кальман)
+        _pairs_v3_db = Path('/root/finlab/robots/pairs_robot_v3.db')
+        if _pairs_v3_db.exists():
+            _conn = _sqlite3.connect(_pairs_v3_db)
+            try:
+                _closed_pairs_v3 = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn)
+                _open_pairs_v3 = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn)
+            except Exception:
+                _closed_pairs_v3 = pd.DataFrame()
+                _open_pairs_v3 = pd.DataFrame()
+            _conn.close()
+            _pairs_v3_pnl = float(_closed_pairs_v3['pnl'].sum()) if len(_closed_pairs_v3) > 0 else 0.0
+            _pairs_v3_wr = _calc_wr(_closed_pairs_v3) if len(_closed_pairs_v3) > 0 else 0
+            _robots_stats['📊 Парная торговля_v3'] = {
+                'open': len(_open_pairs_v3),
+                'pnl': _pairs_v3_pnl,
+                'wr': _pairs_v3_wr,
+                'db': _pairs_v3_db,
                 'is_pairs': True,
             }
 
@@ -4251,7 +4272,7 @@ elif page == "📊 Торговые роботы":
         # «Активных» = systemctl is-active
         import subprocess as _sp
         _active_robots = 0
-        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats', 'finlab-robot', 'finlab-robot-v2']:
+        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats', 'finlab-robot', 'finlab-robot-v2', 'finlab-robot-v3']:
             _r = _sp.run(['systemctl', 'is-active', _svc], capture_output=True, text=True)
             if _r.stdout.strip() == 'active':
                 _active_robots += 1
@@ -4874,6 +4895,202 @@ elif page == "📊 Торговые роботы":
                 _c3.metric("WR (%)", f"{_v2_wr:.1f}")
                 _v2_disp = _v2_closed[['pair_name', 'direction', 'pnl', 'entry_z', 'entry_time', 'exit_time']].copy() if set(['pair_name','direction','pnl','entry_z','entry_time','exit_time']).issubset(_v2_closed.columns) else _v2_closed
                 st.dataframe(_v2_disp, use_container_width=True, hide_index=True)
+            else:
+                st.info("Сделок пока нет")
+
+            _conn_v2.close()
+
+    elif robot_tab == "📊 Парная торговля_v3":
+        st.subheader("📊 Парная торговля v2 (эксперимент)")
+        st.warning("🧪 Экспериментальный робот. Окно торговли 07:00–23:00 МСК. Сейчас paused=True (безопасно).")
+
+        import subprocess as _sp_v2
+        import sqlite3 as _sq_v2
+        import json as _json_v2
+        from pathlib import Path as _P_v2
+
+        # Статус сервиса
+        _v3_running = _sp_v2.run(['systemctl', 'is-active', 'finlab-robot-v2'], capture_output=True, text=True).stdout.strip() == 'active'
+
+        # State
+        _v3_state_file = _P_v2('/root/finlab/robots/robot_state_v2.json')
+        _v3_paused = True
+        _v3_updated = '—'
+        if _v3_state_file.exists():
+            try:
+                _v3_state = _json_v2.loads(_v3_state_file.read_text())
+                _v3_paused = bool(_v3_state.get('paused', True))
+                _v3_updated = _v3_state.get('updated', '—')
+            except Exception:
+                pass
+
+        # Статус робота
+        if _v3_running and not _v3_paused:
+            st.success(f"🟢 Робот работает (paused=False)")
+        elif _v3_running and _v3_paused:
+            st.warning(f"🟡 Робот на паузе (paused=True). State обновлён: {_v3_updated}")
+        else:
+            st.error(f"🔴 Робот не запущен (systemd: inactive)")
+
+        # Конфиг v2
+        _v3_cfg_path = _P_v2('/root/finlab/FinLabPy/My_Indicators/pairs_config_v2.json')
+        if _v3_cfg_path.exists():
+            try:
+                _v3_cfg = _json_v2.loads(_v3_cfg_path.read_text())
+                _v3_enabled = [k for k, p in _v3_cfg.get('pairs', {}).items() if p.get('enabled')]
+                st.caption(f"Config v2: {len(_v3_enabled)} enabled-пар | last_updated: {_v3_cfg.get('last_updated', '—')}")
+            except Exception:
+                st.caption("Config v2: не удалось прочитать")
+
+        _v3_db = _P_v2('/root/finlab/robots/pairs_robot_v2.db')
+
+        # === КНОПКИ УПРАВЛЕНИЯ v2 ===
+        st.markdown("### 🎛️ Управление")
+        st.markdown('''
+        <style>
+        div.stButton > button {
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+            margin: 0 auto;
+        }
+        div.stButton > button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        </style>
+        ''', unsafe_allow_html=True)
+
+        _v3_cmd_file = _P_v2('/root/finlab/robots/robot_command_v2.txt')
+        _v3_open_count = 0
+        if _v3_db.exists():
+            try:
+                _conn_tmp = _sq_v2.connect(str(_v3_db))
+                _v3_open_count = _conn_tmp.execute("SELECT COUNT(*) FROM positions WHERE status='OPEN'").fetchone()[0]
+                _conn_tmp.close()
+            except Exception:
+                pass
+
+        _c_start, _c_pause, _c_stop = st.columns(3)
+
+        with _c_start:
+            if _v3_running and not _v3_paused:
+                st.button("▶️ Старт", type="primary", use_container_width=True, key="v3_start_disabled", disabled=True)
+            elif _v3_running and _v3_paused:
+                if st.button("▶️ Старт", type="primary", use_container_width=True, key="v3_start_resume"):
+                    _v3_cmd_file.write_text('RESUME')
+                    with st.spinner('⏳ Отправка RESUME... (v2 применит в течение 5 сек)'):
+                        import time as _time
+                        _time.sleep(3)
+                    st.success('▶️ RESUME отправлен в v2')
+                    st.rerun()
+            else:
+                if st.button("▶️ Старт", type="secondary", use_container_width=True, key="v3_start_stopped"):
+                    _sp_v2.run(['systemctl', 'start', 'finlab-robot-v2'], capture_output=True)
+                    st.success('▶️ v2 запущен в паузе. Нажмите «Старт» ещё раз для RESUME.')
+                    st.rerun()
+
+        with _c_pause:
+            if _v3_running and not _v3_paused:
+                if st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='v3_pause_active'):
+                    _v3_cmd_file.write_text('PAUSE')
+                    with st.spinner('⏳ Отправка PAUSE... (v2 применит в течение 5 сек)'):
+                        import time as _time
+                        _time.sleep(3)
+                    st.warning('⏸️ PAUSE отправлен в v2.')
+                    st.rerun()
+            else:
+                st.button('⏸️ Пауза', type='secondary', use_container_width=True, key='v3_pause_disabled', disabled=True)
+
+        with _c_stop:
+            if _v3_running:
+                if st.button("🛑 Стоп", type="secondary", use_container_width=True, key="v3_stop_running"):
+                    _v3_cmd_file.write_text('STOP')
+                    with st.spinner('⏳ Graceful shutdown v2... (~5 сек)'):
+                        import time as _time
+                        _time.sleep(5)
+                    _sp_v2.run(['systemctl', 'stop', 'finlab-robot-v2'], capture_output=True)
+                    st.success("v2 остановлен. Все позиции закрыты.")
+                    st.rerun()
+            else:
+                st.button('🛑 Стоп', type='primary', use_container_width=True, key='v3_stop_stopped', disabled=True)
+
+        st.markdown("---")
+
+        # БД v2
+        if not _v3_db.exists():
+            st.error("БД v2 не найдена: pairs_robot_v2.db")
+        else:
+            _conn_v2 = _sq_v2.connect(str(_v3_db))
+
+            # Открытые позиции
+            st.markdown("### 📊 Открытые позиции")
+            try:
+                _v3_open = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn_v2)
+            except Exception:
+                _v3_open = pd.DataFrame()
+            if len(_v3_open) > 0:
+                st.dataframe(_v3_open, use_container_width=True, hide_index=True)
+            else:
+                st.info("Нет открытых позиций")
+
+            # Signals за 24ч
+            st.markdown("### 📡 Signals за 24ч")
+            try:
+                _v3_sig_stats = pd.read_sql_query("""
+                    SELECT status, reason, COUNT(*) as cnt
+                    FROM signals
+                    WHERE time > datetime('now','-24 hours')
+                    GROUP BY status, reason
+                    ORDER BY cnt DESC
+                """, _conn_v2)
+            except Exception as _e:
+                _v3_sig_stats = pd.DataFrame()
+                st.caption(f"Ошибка чтения signals: {_e}")
+
+            if len(_v3_sig_stats) > 0:
+                st.dataframe(_v3_sig_stats, use_container_width=True, hide_index=True)
+            else:
+                st.info("Signals за 24ч нет (робот на паузе)")
+
+            # Последние 20 signals
+            st.markdown("### 📋 Последние 20 signals")
+            try:
+                _v3_sig_recent = pd.read_sql_query("""
+                    SELECT time, pair_name, timeframe, z, corr, status, reason
+                    FROM signals
+                    ORDER BY id DESC
+                    LIMIT 20
+                """, _conn_v2)
+                if len(_v3_sig_recent) > 0:
+                    st.dataframe(_v3_sig_recent, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Signals нет")
+            except Exception as _e:
+                st.caption(f"Ошибка: {_e}")
+
+            # Статистика сделок
+            st.markdown("### 📈 Статистика сделок")
+            try:
+                _v3_closed = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn_v2)
+            except Exception:
+                _v3_closed = pd.DataFrame()
+
+            if len(_v3_closed) > 0:
+                _v3_pnl = float(_v3_closed['pnl'].sum()) if 'pnl' in _v3_closed.columns else 0.0
+                _v3_wr = (len(_v3_closed[_v3_closed['pnl'] > 0]) / len(_v3_closed) * 100) if 'pnl' in _v3_closed.columns else 0
+                _c1, _c2, _c3 = st.columns(3)
+                _c1.metric("Сделок", len(_v3_closed))
+                _c2.metric("PnL (₽)", f"{_v3_pnl:.2f}")
+                _c3.metric("WR (%)", f"{_v3_wr:.1f}")
+                _v3_disp = _v3_closed[['pair_name', 'direction', 'pnl', 'entry_z', 'entry_time', 'exit_time']].copy() if set(['pair_name','direction','pnl','entry_z','entry_time','exit_time']).issubset(_v3_closed.columns) else _v3_closed
+                st.dataframe(_v3_disp, use_container_width=True, hide_index=True)
             else:
                 st.info("Сделок пока нет")
 

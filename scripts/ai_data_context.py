@@ -292,7 +292,15 @@ def get_legend():
                 'state': 'robots/robot_state_v2.json',
                 'config': 'FinLabPy/My_Indicators/pairs_config_v2.json',
                 'window': '07:00–23:00 МСК',
-                'role': 'ЭКСПЕРИМЕНТ. M10=2.0 (было 2.5). BR-GAZPF_H4 off. НЕ смешивать с v1.',
+                'role': 'ЭКСПЕРИМЕНТ. M10=1.8 (было 2.5). BR-GAZPF_H4 off. НЕ смешивать с v1.',
+            },
+            'pairs_v3': {
+                'name': '📊 Парная торговля_v3',
+                'db': 'robots/pairs_robot_v3.db',
+                'state': 'robots/robot_state_v3.json',
+                'config': 'FinLabPy/My_Indicators/pairs_config_v3.json',
+                'window': '07:00–23:00 МСК',
+                'role': 'ЭКСПЕРИМЕНТ. Кальман (адаптивная beta). 8 пар. НЕ смешивать с v1/v2.',
             },
             'futures_algopack_v1': {'name': '📊 Робот фьючерсов (Algopack)', 'db': 'futures_algopack_robot.db'},
             'futures_algopack_v2': {'name': '📊 Робот фьючерсов (v2)', 'db': 'futures_algopack_robot_v2.db'},
@@ -310,14 +318,83 @@ def get_legend():
             'short_forbidden': 'шорт акции запрещён (BANE, BELU и др.) — SHORT_SPREAD пропускается.',
             'open_failed': 'open_position вернул False (шорт запрещён, price<=0, volume<1).',
         },
-        'pairs_vs_futures': 'pairs (v1, v2) — парная торговля акция+фьючерс. futures-algopack (v1, v2) — одиночные фьючерсы. stocks — акции.',
-        'rule': 'РАЗЛИЧАЙ v1 и v2. Указывай [v1] или [v2]. Не смешивай их PnL, signals, trades, config.',
+        'pairs_vs_futures': 'pairs (v1, v2, v3) — парная торговля акция+фьючерс. futures-algopack (v1, v2) — одиночные фьючерсы. stocks — акции.',
+        'rule': 'РАЗЛИЧАЙ v1, v2 и v3. Указывай [v1], [v2] или [v3]. Не смешивай их PnL, signals, trades, config.',
     }
 
 
 def get_config_v2():
     """Config v2 (эксперимент)."""
     path = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config_v2.json'
+    if not path.exists():
+        return None
+    try:
+        d = json.loads(path.read_text())
+        enabled = [k for k, p in d.get('pairs', {}).items() if p.get('enabled')]
+        return {
+            'last_updated': d.get('last_updated'),
+            'enabled_count': len(enabled),
+            'enabled_pairs': enabled,
+            'entry_z': {k: p.get('best_params', {}).get('entry_z') for k, p in d.get('pairs', {}).items() if p.get('enabled')},
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_robot_state_v3():
+    """Состояние v3-робота (paused, running, updated)."""
+    state_file = ROOT / 'robots' / 'robot_state_v3.json'
+    if not state_file.exists():
+        return None
+    try:
+        return json.load(open(state_file))
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_trades_history_v3(limit=20):
+    """История сделок v3 (positions CLOSED)."""
+    db = ROOT / 'robots' / 'pairs_robot_v3.db'
+    if not db.exists():
+        return []
+    try:
+        conn = sqlite3.connect(db)
+        df = pd.read_sql_query(f'SELECT pair_name, direction, entry_z, exit_z, entry_time, exit_time, pnl FROM positions WHERE status="CLOSED" ORDER BY id DESC LIMIT {limit}', conn)
+        conn.close()
+        return df.to_dict(orient='records')
+    except Exception as e:
+        return [{'error': str(e)}]
+
+
+def get_signals_summary_v3(hours=24):
+    """Сводка сигналов v3 за N часов."""
+    db = ROOT / 'robots' / 'pairs_robot_v3.db'
+    if not db.exists():
+        return {'stats': [], 'recent': []}
+    try:
+        conn = sqlite3.connect(db)
+        stats = pd.read_sql_query(f"""
+            SELECT status, reason, COUNT(*) as cnt
+            FROM signals
+            WHERE time > datetime('now','-{hours} hours')
+            GROUP BY status, reason
+            ORDER BY cnt DESC
+        """, conn)
+        recent = pd.read_sql_query(f"""
+            SELECT time, pair_name, timeframe, z, corr, status, reason
+            FROM signals
+            ORDER BY id DESC
+            LIMIT 20
+        """, conn)
+        conn.close()
+        return {'stats': stats.to_dict(orient='records'), 'recent': recent.to_dict(orient='records')}
+    except Exception as e:
+        return {'error': str(e), 'stats': [], 'recent': []}
+
+
+def get_config_v3():
+    """Config v3 (эксперимент: Кальман)."""
+    path = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config_v3.json'
     if not path.exists():
         return None
     try:
@@ -350,6 +427,10 @@ def main():
         'robot_state_v2': get_robot_state_v2(),
         'trades_history_v2': get_trades_history_v2(limit=20),
         'signals_summary_v2': get_signals_summary_v2(hours=24),
+        'config_v3': get_config_v3(),
+        'robot_state_v3': get_robot_state_v3(),
+        'trades_history_v3': get_trades_history_v3(limit=20),
+        'signals_summary_v3': get_signals_summary_v3(hours=24),
     }
     print(json.dumps(context, ensure_ascii=False, indent=2))
 
