@@ -86,3 +86,4 @@ robots/robot_command_v2.txt
 robots/robot_state_v2.json
 robots/tf_fresh_state_v2.json
 robots/robot_state_v3.json
+robots/robot_command_v3.txt
