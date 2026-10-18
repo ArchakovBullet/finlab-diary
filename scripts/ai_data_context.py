@@ -315,6 +315,24 @@ def get_legend():
     }
 
 
+def get_config_v2():
+    """Config v2 (эксперимент)."""
+    path = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config_v2.json'
+    if not path.exists():
+        return None
+    try:
+        d = json.loads(path.read_text())
+        enabled = [k for k, p in d.get('pairs', {}).items() if p.get('enabled')]
+        return {
+            'last_updated': d.get('last_updated'),
+            'enabled_count': len(enabled),
+            'enabled_pairs': enabled,
+            'entry_z': {k: p.get('best_params', {}).get('entry_z') for k, p in d.get('pairs', {}).items() if p.get('enabled')},
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
 def main():
     now = datetime.now()
     context = {
@@ -322,6 +340,7 @@ def main():
         'legend': get_legend(),
         'freshness': get_freshness(),
         'config': get_config(),
+        'config_v2': get_config_v2(),
         'quarantine': get_quarantine(),
         'algopack': get_algopack_summary(),
         'cron': get_cron_summary(),

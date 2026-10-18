@@ -157,6 +157,7 @@
 **Документация:**
 - `README.md` (этот файл).
 - `WORK_LOG.md` (живая история).
+- `IDEAS.md` (карта идей — v3, Кальман, OFI, баскет, парковщик, pairs_screener).
 - `MIGRATION_SUMMARY.md` (архив).
 - `finlab-diary/README.md` (дневник).
 - `finlab_dashboard/README.md` (дашборд).
