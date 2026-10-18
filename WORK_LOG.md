@@ -1306,3 +1306,87 @@
 
 ### Git
 - (после commit)
+
+---
+
+## 2026-10-18 (воскресенье) — Кальман: прорыв, v3, AI-легенда
+
+### Кальман — прорыв
+
+- **Тест** (`kalman_test_all.py`) — 5 H4-пар (GD-SV, PD-SV, PT-SV, GD-PT, LK-IMOEXF).
+- **Fixed vs Kalman** (in-sample): PnL в 20–360 раз, WR +10–17%, Sharpe +13–60%.
+- **Walk-forward** (`kalman_walk_forward_slip.py`) — 5 фолдов, с проскальзыванием (0.02%).
+- **Результат:**
+  - Fixed: PnL=6.80, WR=0.80, Sharpe=14.01, avg=0.0118 (n=578).
+  - Kalman: PnL=1126.42, WR=0.94, Sharpe=22.20, avg=2.0043 (n=562).
+  - **PnL в 165 раз, WR +14%, Sharpe +58%, avg PnL в 170 раз.**
+- **На каждом фолде** — Кальман лучше. **Не переобучение. Прорыв.**
+
+### v3 — создан (каркас + Кальман)
+
+- `pairs_robot_v3.py` — копия v2, пути → v3.
+- `pairs_config_v3.json` — копия v2 (8 пар, M10=1.8).
+- `pairs_robot_v3.db` — новая схема (positions, trades, signals).
+- `finlab-robot-v3.service` — systemd.
+- **Кальман встроен:** `kalman_beta()`, `use_kalman=True` в `calculate_zscore`.
+- **init_db:** signals (17 полей + 3 индекса), positions/trades — новые колонки.
+- **RESUME** — отправлен (понедельник → `paused: false`).
+
+### v3 — в дашборде
+
+- **Radio:** «📊 Парная торговля_v3» (строка 4123).
+- **Обзор:** `_pairs_v3_db`, `_robots_stats['📊 Парная торговля_v3']` (4176-4192).
+- **Активные:** `finlab-robot-v3` (4275).
+- **Таб:** `elif robot_tab == "📊 Парная торговля_v3":` (4903-5098).
+- **Кнопки:** `v3_start_resume`, `v3_pause_active`, `v3_stop_running` (4986, 5001, 5013).
+
+### AI — v3 (легенда + функции)
+
+- `get_robot_state_v3()`, `get_trades_history_v3()`, `get_signals_summary_v3()`, `get_config_v3()`.
+- **Ключи:** `config_v3`, `robot_state_v3`, `trades_history_v3`, `signals_summary_v3`.
+- **Legend:** `pairs_v3` (строка 297), `rule` — `v1, v2 и v3`.
+- **Промпт:** `v1/v2/v3`.
+- **JSON:** `config_v3: 8`, `robot_state_v3: {paused: true}`.
+
+### AI-отчёты — разбор
+
+- **Weekly (W42)** — 14:00 (должен 17:00). **Фикс:** `0 17 * * 0`.
+- **Daily** — каждый день (должен Пн–Сб). **Фикс:** `30 19 * * 1-6`.
+- **AI** — не различает v1/v2/v3. **Патч:** legend + промпт (сделано).
+
+### DD, SY — удалены
+
+- **DD** — фьючерс на PDD Holdings (АДР). **SY** — Sony Group (АДР).
+- **Не обновлялись** ~2.5 месяца. **Удалены** из `tickers_config.json` + файлы (M10, H1, H4, D1) → `_trash`.
+
+### candles_collector — sys.path
+
+- **Проблема:** `ModuleNotFoundError: MOEXPy` (ручной запуск). В cron — работает.
+- **Фикс:** `sys.path.insert(0, project_root / 'FinLabPy')`.
+
+### IDEAS.md — карта идей
+
+- **P0:** v2 замер, v3 каркас.
+- **P1:** Кальман (done), OFI, баскет, walk-forward, парковщик.
+- **P2:** копулы, авто-карантин v2, расширение окна v1.
+- **Правило:** идеи не затираются.
+
+### Git
+
+- `ec60a74` — IDEAS.md.
+- `4fef751` — AI-промпт → legend + config_v2, README → IDEAS.md.
+- `d46da2d` — v3 каркас + IDEAS.md + .gitignore v3.
+- `e3f8b47` — v3 в дашборде + AI (v3) + init_db + RESUME.
+- `21cce56` — kalman-скрипты + .gitignore (robot_command_v3).
+- Все — в `origin` + `diary`.
+
+### Следующее (понедельник, 19.10)
+
+- **Замер v3:** signals, positions, trades. Кальман в работе.
+- **Сравнить** v1 vs v2 vs v3.
+- **Если v3 лучше** — **прорыв** подтверждён.
+- **OFI** (Т-Инвест) — следующий метод.
+- **Парковщик** — P1.
+
+### Git
+- (после commit)
