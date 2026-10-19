@@ -1637,3 +1637,32 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-19 (финал-4) — H1-тест (все 15 пар), LKOH-HYDR enabled
+
+### H1-тест — результаты (walk-forward OLS, 3 фолда, entry_z 1.5–3.0)
+
+**Прибыльные (4/15):**
+| Пара | entry_z | net_pnl | WR | n | Решение |
+|---|---|---|---|---|---|
+| **LKOH-HYDR_H1** | **1.5** | **+1.30** | 0.687 | **413** | ✅ **enabled** (реально прибыльная) |
+| SFIN-SH_H1 | 2.5 | +0.108 | 0.752 | 17 | disabled (мало сделок) |
+| HY-IR_H1 | 3.0 | +0.027 | 0.833 | 5 | disabled (ничтожно) |
+| RASP-RA_H1 | 3.0 | +0.013 | 0.833 | 4 | disabled (ничтожно) |
+
+**Убыточные (11/15):** SOFL-S0, LKOH-ROSN, LKOH-TATN, ROSN-TATN, LKOH-IRAO, HYDR-IRAO, LK-HY, LK-RN, LK-TN, RN-TN, LK-IR — **disabled** (не удалять — правило IDEAS.md).
+
+### v2 — рабочие ТФ
+
+- **M10 (3):** SFIN-SH, BANE-BN, BELU-NB (OLS entry_z=1.8) — **работают** (+9.60).
+- **H4 (5):** GD-SV, PD-SV, PT-SV, GD-PT, LK-IMOEXF (OLS entry_z=2.0–2.5) — **работают**.
+- **H1 (1 enabled + 14 disabled):** **LKOH-HYDR_H1** — **включена** (единственная прибыльная с n=413).
+- **EURRUBF-USDRUBF_H4** — disabled (наблюдение).
+- **Итог:** v2 = **9 enabled** (3 M10 + 5 H4 + 1 H1).
+
+### Git
+
+- (после commit)
+

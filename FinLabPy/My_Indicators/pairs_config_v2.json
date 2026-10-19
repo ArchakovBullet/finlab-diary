@@ -2329,7 +2329,7 @@
       "pair_name": "LKOH-HYDR_H1",
       "best_params": {
         "window": 10,
-        "entry_z": 2.0,
+        "entry_z": 1.5,
         "exit_z": 1.0
       },
       "train_score": 0.215,
@@ -2378,8 +2378,8 @@
         "hedge_ratio": 9.1052
       },
       "total_rows": 7332,
-      "last_optimized": "2026-09-29 20:39:22",
-      "enabled": false
+      "last_optimized": "2026-10-19 21:35:37 (H1 walk-forward: net_pnl +1.30, n=413)",
+      "enabled": true
     },
     "LKOH-ROSN_H1": {
       "pair_name": "LKOH-ROSN_H1",
@@ -2764,5 +2764,5 @@
       "enabled": false
     }
   },
-  "last_updated": "2026-10-19 21:24:48 (EURRUBF-USDRUBF_H4 added)"
+  "last_updated": "2026-10-19 21:35:37 (LKOH-HYDR_H1 enabled)"
 }
