@@ -280,7 +280,7 @@
       },
       "total_rows": 2254,
       "last_optimized": "2026-08-23 20:26:05",
-      "enabled": true
+      "enabled": false
     },
     "PHOR-PH_M10": {
       "pair_name": "PHOR-PH_M10",
@@ -506,7 +506,7 @@
       },
       "total_rows": 1236,
       "last_optimized": "2026-08-23 20:26:23",
-      "enabled": true
+      "enabled": false
     },
     "CHMF-CK_M10": {
       "pair_name": "CHMF-CK_M10",
@@ -620,7 +620,7 @@
       },
       "total_rows": 1694,
       "last_optimized": "2026-08-23 20:26:36",
-      "enabled": true
+      "enabled": false
     },
     "CNYRUBF-UM_M10": {
       "pair_name": "CNYRUBF-UM_M10",
@@ -2677,7 +2677,7 @@
     "PD-SV_H4": {
       "enabled": true,
       "best_params": {
-        "entry_z": 2.0,
+        "entry_z": 1.8,
         "exit_z": 0.5,
         "window": 30,
         "resid_window": 60,
@@ -2687,7 +2687,7 @@
     "PT-SV_H4": {
       "enabled": true,
       "best_params": {
-        "entry_z": 2.0,
+        "entry_z": 2.5,
         "exit_z": 0.5,
         "window": 20,
         "resid_window": 30,
@@ -2695,7 +2695,7 @@
       }
     },
     "GD-PT_H4": {
-      "enabled": true,
+      "enabled": false,
       "best_params": {
         "entry_z": 2.0,
         "exit_z": 0.5,
@@ -2735,5 +2735,5 @@
       }
     }
   },
-  "last_updated": "2026-10-19 19:34:59 (v3.1: Kalman — M10=1.5, H4=2.0)"
+  "last_updated": "2026-10-19 20:23:14 (v3.2: M10 off, GD-PT off, entry_z по walk-forward)"
 }
