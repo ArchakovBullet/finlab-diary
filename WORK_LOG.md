@@ -1584,3 +1584,29 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-19 (финал-2) — чистка v2 (H1-пары)
+
+### v2 — удалены H1-пары
+
+- **H1-пар в v2: 15** (наследие от v1-копии, все `enabled=false`).
+- **Удалено** из config v2 (гигиена). Осталось: 58 пар (как в v3).
+- **Бэкап:** `pairs_config_v2.json.bak1`.
+- **enabled:** 8 (M10: SFIN-SH, BANE-BN, BELU-NB; H4: GD-SV, PD-SV, PT-SV, GD-PT? — проверить).
+
+### v2 — EURRUBF-USDRUBF_H4 (disabled)
+
+- Добавлена, наблюдение. entry_z=2.0, OLS.
+- **Включить** после 2-3 дней, если signals идут.
+
+### v3 — почищен (H1 удалены, 4 H4-пары)
+
+- GD-SV=2.0, PD-SV=1.8, PT-SV=2.5, LK-IMOEXF=2.0 + GAZP-GAZPF (disabled).
+- **Не трогать** 3-5 дней.
+
+### Git
+
+- (после commit)
+
