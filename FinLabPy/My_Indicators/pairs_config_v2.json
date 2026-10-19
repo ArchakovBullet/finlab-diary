@@ -2733,7 +2733,36 @@
         "resid_window": 30,
         "use_coint": true
       }
+    },
+    "EURRUBF-USDRUBF_H4": {
+      "pair_name": "EURRUBF-USDRUBF_H4",
+      "best_params": {
+        "window": 20,
+        "entry_z": 2.0,
+        "exit_z": 0.5
+      },
+      "train_score": 0.0,
+      "test_metrics": {
+        "total_pnl": 0.514,
+        "win_rate": 0.728,
+        "sharpe": 10.542,
+        "max_drawdown": 0.0,
+        "num_trades": 170
+      },
+      "adf": {
+        "is_stationary": "unknown"
+      },
+      "cointegration": {
+        "is_cointegrated": "unknown",
+        "p_value": 0.1144
+      },
+      "johansen": {
+        "is_cointegrated": false
+      },
+      "total_rows": 3483,
+      "last_optimized": "2026-10-19 21:24:48 (walk-forward EURRUBF, OLS)",
+      "enabled": false
     }
   },
-  "last_updated": "2026-10-17 (experiment 2: M10 entry_z=1.8)"
+  "last_updated": "2026-10-19 21:24:48 (EURRUBF-USDRUBF_H4 added)"
 }

@@ -1550,3 +1550,37 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-19 (финал) — EURRUBF-тест (OLS прибыльный), чистка v3
+
+### EURRUBF-USDRUBF_H4 — тест
+
+- **OLS:** net_pnl +0.48…+0.51 (entry_z 1.5–2.0), WR 0.61–0.89, net_sharpe 6.0–18.2. **Прибыльно!**
+- **Kalman:** net_pnl −0.92…−0.037. **Не работает.**
+- **Вывод:** EURRUBF-USDRUBF — **OLS-пара**, не Кальман. Добавлена **в v2** (OLS, entry_z=2.0, enabled=false, наблюдение).
+- **Источник:** coint_p=0.114 (не коинтегрирована формально), но corr=0.918 + walk-forward OLS прибыльный.
+
+### v3 — чистка H1-пар
+
+- **H1-пар в v3: 15** (наследие от v1-копии, все `enabled=false`).
+- **Удалено** из config v3 (гигиена). Осталось: 4 H4-пары (GD-SV, PD-SV, PT-SV, LK-IMOEXF) + GAZP-GAZPF (disabled).
+- **M10 off** (все 24 M10-пары `enabled=False`).
+- **Бэкап:** `pairs_config_v3.json.bak3`.
+
+### v2 — EURRUBF добавлена
+
+- **v2:** 8 M10/H4-пар + EURRUBF-USDRUBF_H4 (disabled). Всего 9.
+- **enabled:** 8 (M10: SFIN-SH, BANE-BN, BELU-NB; H4: GD-SV, PD-SV, PT-SV, LK-IMOEXF).
+- **EURRUBF** — disabled, наблюдение. Включить после 2-3 дней, если signals идут.
+
+### v3.2 — финал
+
+- 4 H4-пары (GD-SV=2.0, PD-SV=1.8, PT-SV=2.5, LK-IMOEXF=2.0) + GAZP-GAZPF (disabled).
+- **Не трогать** 3-5 дней, наблюдать.
+
+### Git
+
+- (после commit)
+
