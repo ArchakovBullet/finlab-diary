@@ -1488,3 +1488,37 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-19 (ночь) — D1-тупик, cross-class: симуляция OK
+
+### D1-тест — тупик
+
+- **Данных мало:** SFIN-SH_D1, BANE-BN_D1, BELU-NB_D1 — **~61 строка** после merge. Walk-forward **невозможен** (warmup 50 + window 20 = 70 > 61).
+- **OLS:** SFIN-SH — 1 сделка (+0.0139), BANE-BN — 0 сделок, BELU-NB — 2 сделки (+0.0088). **Ничтожно.**
+- **Kalman:** 0 сделок везде (warmup не укладывается).
+- **Вывод:** D1 **не спасает** M10-пары. **M10 в v3 — окончательно off.** Альтернатив (H1, D1) нет.
+
+### Cross-class — симуляция (без изменения кода)
+
+- **GAZP-GAZPF_H4:** LONG_SPREAD → ✅ OK (BUY GAZP, SELL GAZPF); SHORT_SPREAD → ⏸️ BLOCKED (SELL GAZP — акция).
+- **LKOH-LK_H4:** LONG_SPREAD → ✅ OK (BUY LKOH, SELL LK); SHORT_SPREAD → ⏸️ BLOCKED.
+- **Вывод:** cross-class **уже работает** на уровне кода `is_stock()`. **Без изменений.** LONG_SPREAD проходит, SHORT_SPREAD блокируется. **Твоя позиция соблюдена.**
+
+### Cross-class — walk-forward
+
+- **Баги:** `pd.merge` падал на `datetime64 vs str` — фикс: `pd.to_datetime` до merge.
+- **Пары:** GAZP-GAZPF_H4, LKOH-LK_H4, SBER-SBERF_H4.
+- **Split по direction:** LONG_only (акция в BUY), SHORT_only (акция в SELL — блок), BOTH.
+- **Ждём:** net_pnl > 0 на LONG_only → **включить** в v3 (enabled=true). Если нет — **не включать**.
+
+### v3.2 — не тронут
+
+- 4 H4-пары (GD-SV, PD-SV, PT-SV, LK-IMOEXF) + GAZP-GAZPF (disabled, наблюдение).
+- v1/v2 — не тронуты.
+
+### Git
+
+- (после commit)
+

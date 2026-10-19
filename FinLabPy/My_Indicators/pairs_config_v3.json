@@ -2733,7 +2733,35 @@
         "resid_window": 30,
         "use_coint": true
       }
+    },
+    "GAZP-GAZPF_H4": {
+      "pair_name": "GAZP-GAZPF_H4",
+      "best_params": {
+        "window": 20,
+        "entry_z": 2.0,
+        "exit_z": 0.5
+      },
+      "train_score": 0.0,
+      "test_metrics": {
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe": 0.0,
+        "max_drawdown": 0.0,
+        "num_trades": 0
+      },
+      "adf": {
+        "is_stationary": "unknown"
+      },
+      "cointegration": {
+        "is_cointegrated": "unknown"
+      },
+      "johansen": {
+        "is_cointegrated": false
+      },
+      "total_rows": 0,
+      "last_optimized": "2026-10-19 20:54:35",
+      "enabled": false
     }
   },
-  "last_updated": "2026-10-19 20:23:14 (v3.2: M10 off, GD-PT off, entry_z по walk-forward)"
+  "last_updated": "2026-10-19 20:54:35 (cross-class test: GAZP-GAZPF)"
 }
