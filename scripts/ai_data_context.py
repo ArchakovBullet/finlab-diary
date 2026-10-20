@@ -410,6 +410,34 @@ def get_config_v3():
         return {'error': str(e)}
 
 
+
+
+def get_discovery_summary(max_rows=15):
+    """Читает последний logs/discovery_*.csv, возвращает top-N новых пар."""
+    from pathlib import Path
+    import glob
+    import pandas as pd
+    logs = Path('/root/finlab/logs')
+    files = sorted(glob.glob(str(logs / 'discovery_*.csv')))
+    if not files:
+        return {'status': 'no_file', 'rows': 0, 'top': []}
+    latest = files[-1]
+    try:
+        df = pd.read_csv(latest)
+    except Exception as e:
+        return {'status': f'error: {e}', 'rows': 0, 'top': []}
+    # top по is_coint, потом corr
+    if 'is_coint' in df.columns:
+        df = df.sort_values(['is_coint','corr'], ascending=[False, False])
+    top = df.head(max_rows).to_dict(orient='records')
+    return {
+        'status': 'ok',
+        'file': latest,
+        'rows': len(df),
+        'coint_count': int(df['is_coint'].sum()) if 'is_coint' in df.columns else 0,
+        'top': top,
+    }
+
 def main():
     now = datetime.now()
     context = {
