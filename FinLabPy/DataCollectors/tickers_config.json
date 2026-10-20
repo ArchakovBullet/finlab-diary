@@ -303,7 +303,20 @@
     "XI",
     "XR",
     "YD",
-    "ZC"
+    "ZC",
+    "BTC",
+    "COCOA",
+    "COPPER",
+    "ALUM",
+    "UCAD",
+    "AI92",
+    "AI95",
+    "AED",
+    "BYN",
+    "UCHF",
+    "AUDU",
+    "BRAZIL",
+    "ARGT"
   ],
   "futures_boards": {
     "CE": "RFUD",
@@ -326,5 +339,6 @@
     "VI": "RFUD",
     "W4": "RFUD",
     "CR": "RFUD"
-  }
+  },
+  "last_updated": "2026-10-20 19:32:18 (discovery: +13 новых)"
 }
