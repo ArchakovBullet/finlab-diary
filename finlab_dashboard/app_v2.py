@@ -4120,7 +4120,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
+        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📊 Парная торговля_v4 (test)", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -4272,7 +4272,7 @@ elif page == "📊 Торговые роботы":
         # «Активных» = systemctl is-active
         import subprocess as _sp
         _active_robots = 0
-        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats', 'finlab-robot', 'finlab-robot-v2', 'finlab-robot-v3']:
+        for _svc in ['finlab-futures-algopack', 'finlab-futures-algopack-v2', 'finlab-stocks-tradestats', 'finlab-robot', 'finlab-robot-v2', 'finlab-robot-v3', 'finlab-robot-test']:
             _r = _sp.run(['systemctl', 'is-active', _svc], capture_output=True, text=True)
             if _r.stdout.strip() == 'active':
                 _active_robots += 1

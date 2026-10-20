@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """ai_daily_report.py — ежедневный отчёт через VseGPT + email.
+from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4
+
 
 Читает robot.log за 24ч, robot_state.json, pairs_robot.db.
 Отправляет в DeepSeek, сохраняет в logs/ai_daily/, шлёт email.
