@@ -2154,8 +2154,8 @@
         "is_cointegrated": false
       },
       "total_rows": 3483,
-      "last_optimized": "2026-10-19 21:24:48 (walk-forward EURRUBF, OLS)",
-      "enabled": false
+      "last_optimized": "2026-10-20 20:29:12 (re-enabled: OLS прибыльный, entry_z=2.0)",
+      "enabled": true
     },
     "SFIN-SH_H1": {
       "pair_name": "SFIN-SH_H1",
@@ -2764,5 +2764,5 @@
       "enabled": false
     }
   },
-  "last_updated": "2026-10-19 21:35:37 (LKOH-HYDR_H1 enabled)"
+  "last_updated": "2026-10-20 20:29:12 (EURRUBF re-enabled)"
 }
