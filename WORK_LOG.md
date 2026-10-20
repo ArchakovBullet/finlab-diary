@@ -1789,3 +1789,70 @@
 
 - 5603025 — discovery: пустой CSV (0 пар); weekly: discovery в user_content.
 
+
+---
+
+## 2026-10-20 (вечер, разбор Daily) — выводы
+
+### Daily Report 20.10 — разбор
+
+**Работает:**
+- v3: 96 z_below_entry + 8 time — сигналы идут, z не достигает entry_z (норма).
+- v2: 9 enabled, BANE-BN_M10 +9.60 (19.10) — логика v2 работает.
+- ML-фильтр: v1 (3 BLOCK), v2 (20 BLOCK), v3 (1 BLOCK) — корректно.
+- AI-daily: различает v1/v2/v3 ✅.
+- Свежесть: M10/H1/D1 286/295, H4 295/295 — норма.
+
+**Внимание:**
+- **v2 LKOH-HYDR_H1:** corr=-0.009 (ниже gate 0.5). Пара новая (19.10), corr нестабильна. **Наблюдать 2-3 дня.** Если не восстановится — disabled.
+- **v3 open_failed (2):** вероятно шорт акции / price≤0 / volume<1. **Проверить лог v3.**
+- **v1:** 0 сделок, 252 MISSED(time) + 213 MISSED(z_below_entry). Норма (окно 07:00-18:00, entry_z=2.5). AI рекомендует сравнить entry_z=2.5 (v1) vs 1.8 (v2) — за неделю. **v1 не трогаем** (эталон).
+
+**Критично:**
+- **`candles_collector.py` НЕ НАЙДЕН** по пути `scripts/candles_collector.py`. Добавили 13 новых тикеров (BTC, COCOA, COPPER…) в `tickers_config.json`, но **сборщик не найден**. **Найти реальный сборщик** — иначе новые тикеры не соберутся.
+
+### Git
+
+- (после commit)
+
+
+---
+
+## 2026-10-20 (вечер) — adaptive_test_suite: результаты
+
+### Итог: адаптивность НЕ лучше Baseline
+
+**M10 (SFIN-SH, BANE-BN, BELU-NB):**
+- Baseline (entry_z=2.0): PnL -0.0002…-0.0204, WR 0.375–0.382, Sharpe -1.76…-2.24. **Убыточно.**
+- A (adaptive): Sharpe -11…-16. **Хуже.**
+- E (MOEX window): Sharpe -3.5…-5.2. **Хуже.**
+- I (time-of-day): Sharpe -4.2…-7.9. **Хуже.**
+- K (stop-loss): Sharpe -2.6…-4.8. **Хуже.**
+- **Вывод:** M10 **не для адаптивности**. Только v2 с OLS entry_z=1.8 (не 2.0).
+
+**H4 (GD-SV, PD-SV, PT-SV, LK-IMOEXF):**
+- Baseline (entry_z=2.0): PnL +0.36…+4.34, WR 0.853–0.890, Sharpe 12.2–17.1. **Прибыльно.**
+- A (adaptive): Sharpe 8.5–11.0. **Хуже.**
+- E (MOEX window): **0 сделок** (баг: H4-данные без времени → фильтр режет всё).
+- F (quantile): **0 сделок** (баг: percentile rank с NaN).
+- I (time-of-day): Sharpe 12.2–17.1 (идентично Baseline — H4 без времени, time-of-day не работает).
+- K (stop-loss): Sharpe 3.9–6.8. **Хуже.**
+- **Вывод:** H4 **Baseline — лучший**. Адаптивность **не улучшает**.
+
+**Баги в скрипте:**
+- E (MOEX window): H4-данные без времени → фильтр 10:00–24:00 режет всё.
+- F (quantile): percentile rank с NaN → 0 сделок.
+- C, G, H — заглушки (идентичны Baseline).
+
+### Решение: v4 (тестовый робот)
+
+- **Создать** `pairs_robot_test.py` (v4) — **отдельный**, не трогает v1/v2/v3.
+- **Встроить** в дашборд — таб «📊 Парная торговля v4 (test)».
+- **Подключить** к AI — `get_robot_state_v4()`, `get_trades_v4()`, `get_signals_v4()`.
+- **v4 — песочница** для «безумных идей» (адаптивность, ML, multiple entry, stop-loss). **Сейчас — не лучше Baseline**, но **продолжаем тестировать**.
+- **v1/v2/v3 — не трогаем.**
+
+### Git
+
+- (после commit)
+

@@ -274,6 +274,48 @@ def get_signals_summary_v2(hours=24):
         return {'error': str(e), 'stats': [], 'recent': []}
 
 
+
+
+def get_robot_state_v4():
+    import json
+    from pathlib import Path
+    f = Path('/root/finlab/robots/robot_state_test.json')
+    if not f.exists(): return {'status': 'no_file'}
+    try:
+        return json.loads(f.read_text())
+    except Exception as e:
+        return {'status': f'error: {e}'}
+
+
+def get_trades_history_v4(limit=20):
+    import sqlite3
+    from pathlib import Path
+    f = Path('/root/finlab/robots/pairs_robot_test.db')
+    if not f.exists(): return []
+    try:
+        con = sqlite3.connect(f); cur = con.cursor()
+        rows = list(cur.execute("select pair_name, action, direction, pnl, time from trades order by id desc limit ?", (limit,)))
+        con.close()
+        return [{'pair': r[0], 'action': r[1], 'direction': r[2], 'pnl': r[3], 'time': r[4]} for r in rows]
+    except Exception as e:
+        return [{'error': str(e)}]
+
+
+def get_signals_summary_v4(hours=24):
+    import sqlite3
+    from pathlib import Path
+    from datetime import datetime, timedelta
+    f = Path('/root/finlab/robots/pairs_robot_test.db')
+    if not f.exists(): return {'status': 'no_file'}
+    try:
+        con = sqlite3.connect(f); cur = con.cursor()
+        cutoff = (datetime.now() - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
+        rows = list(cur.execute("select status, reason, count(*) from signals where time>=? group by status, reason order by 3 desc", (cutoff,)))
+        con.close()
+        return [{'status': r[0], 'reason': r[1], 'count': r[2]} for r in rows]
+    except Exception as e:
+        return {'error': str(e)}
+
 def get_legend():
     """Легенда: v1 vs v2, поля signals, роботы. Чтобы AI не смешивал."""
     return {
