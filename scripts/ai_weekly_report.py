@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """ai_weekly_report.py — недельный отчёт через VseGPT + email.
+from ai_data_context import get_discovery_summary
+
 
 Читает daily-отчёты за неделю, pairs_robot.db за неделю, ai_context.md.
 Отправляет в DeepSeek, сохраняет в logs/ai_weekly/, шлёт email.
@@ -128,6 +130,7 @@ def main():
     daily = read_daily_reports(args.days)
     db_stats = read_db_stats(args.days)
     context = read_context()
+    discovery = get_discovery_summary()
 
     # Собираем реальный контекст данных
     try:
@@ -146,6 +149,9 @@ def main():
 
 === Контекст проекта ===
 {context}
+
+=== DISCOVERY (новые активы) ===
+{discovery}
 
 === Daily-отчёты (ИСТОРИЧЕСКИЕ, за {args.days} дней) ===
 {daily}

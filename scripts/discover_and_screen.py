@@ -171,6 +171,10 @@ def main():
 
     if not results:
         print("Screening: 0 пар прошли фильтры.")
+        # Пишем пустой CSV с заголовками, чтобы get_discovery_summary видел файл
+        out = LOGS / f'discovery_{datetime.date.today()}.csv'
+        pd.DataFrame(columns=['new_ticker','old_ticker','corr','coint_p','is_coint','rows']).to_csv(out, index=False)
+        print(f"OK CSV (пустой): {out}")
         return
 
     df = pd.DataFrame(results).sort_values(['is_coint','corr'], ascending=[False, False])
