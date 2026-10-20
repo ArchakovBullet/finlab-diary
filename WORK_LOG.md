@@ -1856,3 +1856,74 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-20 (итог дня) — discovery, адаптивность, v4 (test)
+
+### Discovery (MOEX ISS)
+
+- **`scripts/discover_and_screen.py`** — создан. MOEX ISS → полный список фьючерсов (ASSETCODE) → сравнить с `tickers_config.json` → новые → corr/coint → отчёт.
+- **Dry-run:** 186 «новых» (BTC, COCOA, COPPER, ASML, AFRICA…). **49 с H4.**
+- **Screening:** **0 пар** (coint_p < 0.05 + corr > 0.5). **Не баг — факт.** Новые (BTC, COCOA, COPPER) — **другие классы**, не коррелируют с фьючерсами MOEX на H4.
+- **Фикс:** пустой CSV (если 0 пар) → `get_discovery_summary` → `status: ok, rows: 0`.
+- **Cron:** discovery — вс 16:50 (перед weekly 17:00). **Weekly** — `discovery_summary` в контексте. **Один отчёт.**
+
+### Сбор истории по новым
+
+- **13 перспективных** (BTC, COCOA, COPPER, ALUM, UCAD, AI92, AI95, AED, BYN, UCHF, AUDU, BRAZIL, ARGT) → **добавлены** в `tickers_config.json` (164 → 177).
+- **Сборщик** — `FinLabPy/DataCollectors/candles_collector.py` (не `scripts/`). Cron → H4/M10/H1/D1.
+- **Через 1–2 недели** — discovery по ним.
+
+### EURRUBF — enabled (v2)
+
+- **Было:** disabled, 0 signals.
+- **Стало:** enabled=true, entry_z=2.0. **Signals пойдут.**
+- **Основание:** walk-forward OLS прибыльный (net_pnl +0.514, WR 0.728, Sharpe 10.5).
+
+### Adaptive test suite (A–M)
+
+- **`scripts/adaptive_test_suite.py`** — создан. Walk-forward по идеям A–M (без пирамидинга).
+- **Результаты:**
+  - **M10 (SFIN-SH, BANE-BN, BELU-NB):** Baseline (entry_z=2.0) **убыточен** (Sharpe -1.76…-2.24). **Адаптивность — хуже** (Sharpe -4…-16). **M10 — не для адаптивности.**
+  - **H4 (GD-SV, PD-SV, PT-SV, LK-IMOEXF):** Baseline **прибыльный** (Sharpe 12.2–17.1). **Адаптивность — хуже** (Sharpe 8.5–11.0). **Baseline — лучший.**
+  - **Баги:** E (MOEX window) — 0 сделок (H4 без времени), F (quantile) — 0 сделок (NaN).
+- **Вывод:** **адаптивность не улучшает** результаты. Baseline — лучший. **v4 — песочница** для дальнейших идей.
+
+### v4 (test) — тестовый робот
+
+- **`robots/pairs_robot_test.py`** — копия v2 + отдельные пути (`pairs_robot_test.db`, `pairs_config_test.json`, `robot_state_test.json`, `robot_command_test.txt`).
+- **`FinLabPy/My_Indicators/pairs_config_test.json`** — копия v2.
+- **`/etc/systemd/system/finlab-robot-test.service`** — создан, **enabled**, **не запущен** (disabled).
+- **Дашборд:** radio «📊 Парная торговля v4 (test)» (добавлен). **Таб v4 — не встроен** (следующий шаг).
+- **AI:** `get_robot_state_v4()`, `get_trades_history_v4()`, `get_signals_summary_v4()` — в `ai_data_context.py`. **AI-daily/weekly** — import добавлен. **Контекст** — v4 в `user_content` (weekly).
+- **v4 — disabled** (не торгует). **v1/v2/v3 — не трогаем.**
+
+### v2 / v3 — статус
+
+- **v2:** 10 enabled (3 M10 + 6 H4 + 1 H1 LKOH-HYDR). EURRUBF — disabled (0 signals, **проверить**: enabled=False?).
+- **v3:** 4 H4 (GD-SV, PD-SV, PT-SV, LK-IMOEXF). Кальман. 0 trades (entry_z не достигнут).
+- **LKOH-HYDR:** corr=-0.009 (MISSED corr_gate). Наблюдать 2–3 дня.
+- **open_failed (v3):** BANE-BN_M10 — шорт по акции BANE. **Историческое** (v3 не торгует BANE). **Не баг.**
+
+### Daily 20.10 — разбор
+
+- **Работает:** v2 (+9.60), v3 (signals идут), ML-фильтр, AI-daily (v1/v2/v3), свежесть.
+- **Внимание:** LKOH-HYDR (corr=-0.009), v3 open_failed (2, исторические), v1 (0 сделок — норма).
+- **Критично:** `candles_collector.py` — найден (`FinLabPy/DataCollectors/`). **13 новых тикеров** — подхватит.
+
+### Git
+
+- 434c42c — adaptive_test_suite.py, tickers_config (+13).
+- 6ba473b — v4 (test): pairs_robot_test.py, pairs_config_test.json, ai_data_context.
+- 064b35f — dashboard: radio v4; AI-daily/weekly: v4 в контекст.
+
+### Следующее (21.10)
+
+- **Дашборд:** таб v4 (полный, по образцу v3).
+- **AI-weekly (вс 17:00):** проверить discovery (0 пар) + v4.
+- **EURRUBF:** проверить (enabled=False? почему 0 signals?).
+- **LKOH-HYDR:** наблюдать (corr=-0.009).
+- **v2/v3 — не трогаем.** **v4 — disabled.**
+- **Пересборка H4 фьючерсов** (IDEAS.md п. 11) — следующий важный шаг.
+
