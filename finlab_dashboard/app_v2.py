@@ -5096,6 +5096,59 @@ elif page == "📊 Торговые роботы":
 
             _conn_v2.close()
 
+    elif robot_tab == "📊 Парная торговля_v4 (test)":
+        st.subheader("📊 Парная торговля v4 (test) — ПЕСОЧНИЦА")
+        st.warning("🧪 **Это НЕ торговый робот.** Песочница (sandbox) для тестов идей. **Disabled** (не торгует). Не трогает v1/v2/v3.")
+        st.markdown("""
+        **Что это:**
+        - Отдельный робот (`pairs_robot_test.py`) — копия v2.
+        - Отдельная БД (`pairs_robot_test.db`), config (`pairs_config_test.json`), state (`robot_state_test.json`).
+        - **Не торгует** (disabled). **Не трогает** v1/v2/v3.
+
+        **Зачем:**
+        - Тестировать «безумные идеи» (multiple entry, adaptive ML, stop-loss, risk parity).
+        - Сравнивать с Baseline (v2/v3). **Если лучше** — внедрять. **Если нет** — выбрасывать.
+        - AI-daily/weekly **различает** v4 (в контексте).
+
+        **Результаты тестов (21.10):**
+        - Multiple entry_z (1.5/2.0/2.5) — **хуже** single (Sharpe -101…-178 на M10, +0.6…+1.1 на H4).
+        - Adaptive ML (30-й перцентиль) — **лучше** fixed (-4.58 vs -5.19, но **все убыточные**).
+        - ML off — **хуже** (-6.09).
+
+        **Вывод:** v4 — **не для торговли**. **Песочница** для будущих идей.
+        """)
+
+        # Статус сервиса
+        import subprocess as _sp_v4
+        _v4_running = _sp_v4.run(['systemctl', 'is-active', 'finlab-robot-test'], capture_output=True, text=True).stdout.strip() == 'active'
+        if _v4_running:
+            st.success("🟢 Сервис запущен (но v4 не торгует — disabled)")
+        else:
+            st.info("⚪ Сервис не запущен (disabled) — это норма для песочницы")
+
+        # Config v4
+        import json as _json_v4
+        from pathlib import Path as _P_v4
+        _v4_cfg_path = _P_v4('/root/finlab/FinLabPy/My_Indicators/pairs_config_test.json')
+        if _v4_cfg_path.exists():
+            try:
+                _v4_cfg = _json_v4.loads(_v4_cfg_path.read_text())
+                _v4_enabled = [k for k, p in _v4_cfg.get('pairs', {}).items() if p.get('enabled')]
+                st.caption(f"Config v4: {len(_v4_enabled)} enabled-пар | last_updated: {_v4_cfg.get('last_updated', '—')}")
+            except Exception:
+                st.caption("Config v4: не удалось прочитать")
+        else:
+            st.caption("Config v4: не найден (pairs_config_test.json)")
+
+        # БД v4 (если есть)
+        _v4_db = _P_v4('/root/finlab/robots/pairs_robot_test.db')
+        if _v4_db.exists():
+            st.caption(f"БД v4: {_v4_db} (exists)")
+        else:
+            st.caption("БД v4: не найдена (pairs_robot_test.db) — норма (v4 не торгует)")
+
+        st.info("ℹ️ **v4 — песочница.** Для торговли используйте v2 (M10+H4+H1) или v3 (H4, Кальман).")
+
     elif robot_tab == "📈 Робот акций":  # DEAD CODE (таб убран 02.10.2026, заменён на TradeStats)
         st.subheader("📈 Робот акций")
         st.info("Бумажный режим — виртуальные сделки без реального исполнения")
