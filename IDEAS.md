@@ -122,7 +122,7 @@
 ## P2 — Когда-нибудь
 
 ### 8. pairs_screener.py (скринер пар)
-- **Статус:** `in-progress` (19.10.2026 — создан `scripts/pairs_screener.py`, dry-run H4).
+- **Статус:** `done` (21.10.2026 — создан, запущен; 0 коинтегрированных фьючерсов) (19.10.2026 — создан `scripts/pairs_screener.py`, dry-run H4).
 - **Что:** скринер новых пар (отбор по коинтеграции, corr, ликвидности).
 - **Как:** `python scripts/pairs_screener.py --tf H4 --top 20`.
 - **Не** авто-добавление в config: сначала отчёт в `logs/pairs_screener_*.csv`, потом walk-forward, потом вручную в config.
@@ -186,8 +186,8 @@
 
 
 
-### 12. Discovery новых активов + AI-оценка (MOEX ISS → скринер → AI) — завтра
-- **Статус:** `pending` (19.10.2026 — согласовано, реализация завтра).
+### 12. Discovery новых активов + AI-оценка (MOEX ISS → скринер → AI) — done
+- **Статус:** `done` (21.10.2026 — создан `discover_and_screen.py`, cron вс 16:50, weekly с `discovery_summary`; screening 0 пар — факт) (19.10.2026 — согласовано, реализация завтра).
 - **Что:**
   1. `scripts/discover_and_screen.py` — дёргает **MOEX ISS API** (`/iss/engines/futures/markets/forts/securities.json`), получает **полный список фьючерсов**, сравнивает с `tickers_config.json`, находит **новые тикеры**.
   2. Для новых тикеров — **упрощённая проверка** (corr + coint_p) против **уже существующих** тикеров из JSON. **Не полный перебор**, только новые × старые.

@@ -2041,3 +2041,32 @@
 
 - (после commit)
 
+
+---
+
+## 2026-10-21 (вечер-2) — ML-тест BELU-NB, IDEAS.md
+
+### ML-тест BELU-NB_M10 (walk-forward, 3 фолда, entry_z=1.8)
+
+| Вариант | n | NET | WR | Sharpe |
+|---|---|---|---|---|
+| ML off | 200 | -0.1379 | 0.291 | -6.09 |
+| ML fixed (0.5) | 107 | -0.0597 | 0.302 | -5.19 |
+| ML adaptive (30-й перцентиль) | 103 | -0.0483 | 0.311 | -4.58 |
+
+**Выводы:**
+- **Все три — убыточные** (NET < 0). **BELU-NB — слабая пара** (на истории).
+- **ML off — хуже** (-6.09). **ML fixed — лучше** (-5.19). **ML adaptive — лучший** (-4.58).
+- **ML нужен** (без него — хуже). **Adaptive — лучше fixed.**
+- **v2 — не трогаем** (ML fixed, BELU-NB — не входила — все ML_BLOCK). **Наблюдаем.**
+
+### IDEAS.md — обновлён
+
+- **п. 8 (pairs_screener.py):** `in-progress` → **`done`** (создан, запущен, 0 коинтегрированных фьючерсов).
+- **п. 12 (Discovery + AI):** `pending` → **`done`** (создан `discover_and_screen.py`, cron вс 16:50, weekly с `discovery_summary`; screening 0 пар — факт).
+- **п. 9 (копулы, авто-карантин v2), п. 10 (cross-class D1), п. 11 (пересборка H4), п. 13 (Bybit)** — pending.
+
+### Git
+
+- (после commit)
+
