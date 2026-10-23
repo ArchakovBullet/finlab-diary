@@ -36,6 +36,21 @@ except:
     CONTRACT_POINTS = {}
 CONFIG_PATH = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config_test.json'
 
+# ========== COMBINED BETAS (Соколов 2.1) ==========
+_COMBINED_BETAS = {}  # pair_name -> [b1, b2]
+
+def _load_combined_betas():
+    global _COMBINED_BETAS
+    try:
+        _cfg = json.load(open(CONFIG_PATH, encoding='utf-8'))
+        _COMBINED_BETAS = {}
+        for _n, _p in _cfg.get('pairs', {}).items():
+            _cb = _p.get('combined_betas')
+            if _cb and len(_cb) >= 2:
+                _COMBINED_BETAS[_n] = list(_cb)
+    except Exception as _e:
+        print(f'⚠️ combined_betas load: {_e}')
+
 # ========== ML-ФИЛЬТР ==========
 ML_MODELS_DIR = ROOT / 'models'
 _ML_MODELS = {}
@@ -421,7 +436,13 @@ def init_db():
             exit_z REAL,
             exit_price_a REAL,
             exit_price_b REAL,
-            pnl REAL DEFAULT 0
+            pnl REAL DEFAULT 0,
+            leg_a_ticker TEXT, leg_a_direction TEXT, leg_b_ticker TEXT, leg_b_direction TEXT,
+            leg_a_pnl REAL DEFAULT 0, leg_b_pnl REAL DEFAULT 0,
+            leg_a_pnl_points REAL, leg_b_pnl_points REAL, total_pnl_points REAL,
+            contract_code_a TEXT, contract_code_b TEXT,
+            expiry_date_a TEXT, expiry_date_b TEXT,
+            volume_a REAL DEFAULT 1.0, volume_b REAL DEFAULT 1.0
         )
     ''')
     
@@ -442,6 +463,28 @@ def init_db():
             time TEXT NOT NULL
         )
     ''')
+
+    # Таблица сигналов (для AI / дашборда)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS signals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pair_name TEXT NOT NULL,
+            base_pair TEXT NOT NULL,
+            timeframe TEXT NOT NULL,
+            time TEXT NOT NULL,
+            z REAL, corr REAL, beta REAL, spread_trend REAL,
+            signal_type TEXT,
+            status TEXT NOT NULL,
+            reason TEXT,
+            ml_proba REAL,
+            entry_z_rule REAL, exit_z_rule REAL,
+            price_a REAL, price_b REAL
+        )
+    ''')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_time ON signals(time)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_pair ON signals(pair_name)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)')
+
     
     conn.commit()
     conn.close()
@@ -469,60 +512,82 @@ def calculate_correlation(df_a, df_b, window=20):
         return None
 
 
-def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
+def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60, mode="baseline", pair_key=None):
     """Z-score спреда.
 
-    Если use_coint=True — rolling OLS residuals:
-        log_a = beta * log_b + alpha + resid
-        z-score по resid.
-    Иначе — простой spread = log_a - log_b.
+    mode="baseline" — rolling OLS residuals (use_coint=True) или простой спред.
+    mode="combined_v1" — комбинированный спред (Соколов 2.1.34): β из конфига (combined_betas).
     """
     import numpy as np
+    try:
+        from statsmodels.regression.linear_model import OLS as _OLS
+        from statsmodels.tools import add_constant as _add_constant
+    except ImportError:
+        _OLS = None; _add_constant = None
+
     _ca = 'begin' if 'begin' in df_a.columns else 'tradedate'
-    _cb = 'begin' if 'begin' in df_b.columns else 'tradedate'
+    _cb_col = 'begin' if 'begin' in df_b.columns else 'tradedate'
     a = df_a[[_ca, 'close']].rename(columns={_ca: 'dt'})
-    b = df_b[[_cb, 'close']].rename(columns={_cb: 'dt'})
+    b = df_b[[_cb_col, 'close']].rename(columns={_cb_col: 'dt'})
     m = pd.merge(a, b, on='dt', suffixes=('_a', '_b')).sort_values('dt').reset_index(drop=True)
     m['close_a'] = m['close_a'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
     m['close_b'] = m['close_b'].apply(lambda x: float(x) if not isinstance(x, bytes) else 0.0)
     m['log_a'] = np.log(m['close_a'].replace(0, np.nan))
     m['log_b'] = np.log(m['close_b'].replace(0, np.nan))
 
-    if use_coint:
-        # Rolling OLS residuals
-        import numpy as _np
-        try:
-            from statsmodels.regression.linear_model import OLS as _OLS
-            from statsmodels.tools import add_constant as _add_constant
-        except ImportError:
-            use_coint = False
+    _spread_ok = False
 
-    if use_coint:
-        resid = []
-        betas = []
-        for i in range(len(m)):
-            if i < resid_window:
-                resid.append(_np.nan); betas.append(_np.nan); continue
-            y = m['log_a'].iloc[i-resid_window:i].values
-            x = _add_constant(m['log_b'].iloc[i-resid_window:i].values)
-            try:
-                model = _OLS(y, x).fit()
-                beta = model.params[1]; alpha = model.params[0]
-                r = m['log_a'].iloc[i] - beta * m['log_b'].iloc[i] - alpha
-                resid.append(r); betas.append(beta)
-            except Exception:
-                resid.append(_np.nan); betas.append(_np.nan)
-        m['resid'] = resid
-        m['beta'] = betas
-        m['spread'] = m['resid']
-    else:
-        m['spread'] = m['log_a'] - m['log_b']
-        m['beta'] = 1.0  # для non-coint пар beta = 1.0 (fallback)
+    # 1) combined_v1
+    if mode == "combined_v1" and pair_key:
+        _cb = None
+        try:
+            _cfg = json.load(open(CONFIG_PATH, encoding='utf-8'))
+            _p = _cfg.get('pairs', {}).get(pair_key, {})
+            _cb = _p.get('combined_betas')
+        except Exception as _e:
+            print(f'⚠️ combined_betas read: {_e}')
+        if _cb and len(_cb) >= 2:
+            b1, b2 = _cb[0], _cb[1]
+            v = m['log_a'] - b1 * m['log_b']
+            w = m['log_a'] - b2 * m['log_b']
+            sv2 = v.var(ddof=1); sw2 = w.var(ddof=1)
+            denom = sw2 - sv2
+            if abs(denom) > 1e-12:
+                a1 = sw2 / denom; b1w = sv2 / denom
+                m['spread'] = a1 * v + b1w * w
+                m['beta'] = b1
+                _spread_ok = True
+            else:
+                print(f'⚠️ combined_v1: denom≈0, fallback на baseline')
+
+    # 2) baseline (use_coint=True → rolling OLS; else → log_a - log_b)
+    if not _spread_ok:
+        if use_coint and _OLS is not None and _add_constant is not None:
+            import numpy as _np
+            resid = []
+            betas = []
+            for i in range(len(m)):
+                if i < resid_window:
+                    resid.append(_np.nan); betas.append(_np.nan); continue
+                y = m['log_a'].iloc[i-resid_window:i].values
+                x = _add_constant(m['log_b'].iloc[i-resid_window:i].values)
+                try:
+                    model = _OLS(y, x).fit()
+                    beta = model.params[1]; alpha = model.params[0]
+                    r = m['log_a'].iloc[i] - beta * m['log_b'].iloc[i] - alpha
+                    resid.append(r); betas.append(beta)
+                except Exception:
+                    resid.append(_np.nan); betas.append(_np.nan)
+            m['resid'] = resid
+            m['beta'] = betas
+            m['spread'] = m['resid']
+        else:
+            m['spread'] = m['log_a'] - m['log_b']
+            m['beta'] = 1.0
 
     m['mean'] = m['spread'].rolling(window).mean()
     m['std'] = m['spread'].rolling(window).std()
     m['z'] = (m['spread'] - m['mean']) / m['std']
-    # Rolling correlation для ML-фильтра (совпадает с ml_pairs_lr.py)
     if len(m) >= 50:
         m['corr'] = m['close_a'].rolling(50).corr(m['close_b'])
     else:
@@ -542,11 +607,14 @@ def calculate_zscore(df_a, df_b, window=20, use_coint=False, resid_window=60):
 
 
 def send_vk_message(message):
-    """Отправить сообщение в VK (v2)"""
+    """Отправить сообщение в VK (v4, с пометкой [v4] / [v4][combined_v1])."""
     if not VK_TOKEN:
         print("❌ VK_TOKEN не настроен")
         return False
-    message = "[v2] " + message
+    _prefix = "[v4]"
+    if "BANE-BN" in str(message):
+        _prefix = "[v4][combined_v1]"
+    message = f"{_prefix} {message}"
     
     url = 'https://api.vk.com/method/messages.send'
     params = {
@@ -922,6 +990,7 @@ def close_all_positions(reason='STOP'):
 
 
 def main():
+    _load_combined_betas()
     print("=" * 60)
     print(f"🤖 РОБОТ ПАРНОЙ ТОРГОВЛИ | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
@@ -1149,11 +1218,14 @@ def check_signals_by_tf(pairs_config, tf):
             exit_z = _bp.get('exit_z', EXIT_Z_DEFAULT)
             use_coint = _bp.get('use_coint', False)
             resid_window = _bp.get('resid_window', 60)
+            _combined = _bp.get('combined_v1', False)
+            _mode = "combined_v1" if _combined else "baseline"
 
-            # Z-score (с поддержкой cointegration residuals)
+            # Z-score (с поддержкой cointegration residuals / combined_v1)
             result = calculate_zscore(df_a, df_b, window=window,
                                       use_coint=use_coint,
-                                      resid_window=resid_window)
+                                      resid_window=resid_window,
+                                      mode=_mode, pair_key=pair_name)
             if not result:
                 continue
             

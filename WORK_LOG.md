@@ -2367,3 +2367,34 @@
 ### Git
 
 - (после commit)
+
+
+---
+
+## 2026-10-23 (вечер-4) — v4: combined_v1 для BANE-BN запущен
+
+### Что сделано
+
+- **v4** (`pairs_robot_test.py`) — **combined_v1** для **BANE-BN_M10**. Остальные 8 — baseline.
+- **β** — `scripts/update_combined_betas.py` (cron 19:00 пн–сб, `1-6` — **суббота** **торговая** ).
+- **`init_db()`** — добавлены колонки `leg_*` / `contract_*` / `volume_*` + таблица `signals` (как v2).
+- **БД** **v4** — `positions` , `signals` , `trades` .
+- **VK** — пометки `[v4]` / `[v4][combined_v1]` (в `send_vk_message`).
+- **AI** — `get_robot_state_v4` , `get_trades_history_v4` , `get_signals_summary_v4` — работают (signals: 8 MISSED z_below_entry, 1 MISSED corr).
+- **Дашборд** — таб v4: кнопки Старт/Пауза/Стоп, раскрывашка «Что анализирует v4», метрики (PnL, trades, WR). v4 — в «🤖 Роботы».
+
+### Статус
+
+- **v4** — `active (running)` , `paused=False` , `running=True`.
+- **v2** — **не трогали** (работает, PnL +149.88₽, WR 87.5%).
+- **v1/v3** — **не трогали**.
+
+### Наблюдение
+
+- **1–2 недели** — сравнить v4 (combined_v1) vs v2 (baseline) на BANE-BN.
+- **Если** v4 **лучше** — включить **combined_v1** в **v2** (только BANE-BN).
+- **Если** **хуже** — фиксируем, 2.1 `done` (не работает).
+
+### Git
+
+- (после commit)

@@ -4193,6 +4193,27 @@ elif page == "📊 Торговые роботы":
                 'is_pairs': True,
             }
 
+        # Парный робот v4 (песочница: combined_v1 для BANE-BN)
+        _pairs_v4_db = Path('/root/finlab/robots/pairs_robot_test.db')
+        if _pairs_v4_db.exists():
+            _conn = _sqlite3.connect(_pairs_v4_db)
+            try:
+                _closed_pairs_v4 = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn)
+                _open_pairs_v4 = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn)
+            except Exception:
+                _closed_pairs_v4 = pd.DataFrame()
+                _open_pairs_v4 = pd.DataFrame()
+            _conn.close()
+            _pairs_v4_pnl = float(_closed_pairs_v4['pnl'].sum()) if len(_closed_pairs_v4) > 0 else 0.0
+            _pairs_v4_wr = _calc_wr(_closed_pairs_v4) if len(_closed_pairs_v4) > 0 else 0
+            _robots_stats['📊 Парная торговля_v4 (test)'] = {
+                'open': len(_open_pairs_v4),
+                'pnl': _pairs_v4_pnl,
+                'wr': _pairs_v4_wr,
+                'db': _pairs_v4_db,
+                'is_pairs': True,
+            }
+
         # Algopack-робот (заменяет старый «Робот фьючерсов»)
         _alg_db = Path('/root/finlab/robots/futures_algopack_robot.db')
         if _alg_db.exists():
@@ -5098,56 +5119,103 @@ elif page == "📊 Торговые роботы":
 
     elif robot_tab == "📊 Парная торговля_v4 (test)":
         st.subheader("📊 Парная торговля v4 (test) — ПЕСОЧНИЦА")
-        st.warning("🧪 **Это НЕ торговый робот.** Песочница (sandbox) для тестов идей. **Disabled** (не торгует). Не трогает v1/v2/v3.")
-        st.markdown("""
-        **Что это:**
-        - Отдельный робот (`pairs_robot_test.py`) — копия v2.
-        - Отдельная БД (`pairs_robot_test.db`), config (`pairs_config_test.json`), state (`robot_state_test.json`).
-        - **Не торгует** (disabled). **Не трогает** v1/v2/v3.
+        st.caption("🧪 v4 — песочница. Тестирует combined_v1 (Соколов 2.1.34) для BANE-BN. Остальные — baseline.")
 
-        **Зачем:**
-        - Тестировать «безумные идеи» (multiple entry, adaptive ML, stop-loss, risk parity).
-        - Сравнивать с Baseline (v2/v3). **Если лучше** — внедрять. **Если нет** — выбрасывать.
-        - AI-daily/weekly **различает** v4 (в контексте).
+        # ===== КНОПКИ УПРАВЛЕНИЯ =====
+        import subprocess as _sp_v4_ctl
+        from pathlib import Path as _P_v4_ctl
 
-        **Результаты тестов (21.10):**
-        - Multiple entry_z (1.5/2.0/2.5) — **хуже** single (Sharpe -101…-178 на M10, +0.6…+1.1 на H4).
-        - Adaptive ML (30-й перцентиль) — **лучше** fixed (-4.58 vs -5.19, но **все убыточные**).
-        - ML off — **хуже** (-6.09).
+        _cmd_file = _P_v4_ctl('/root/finlab/robots/robot_command_test.txt')
+        _state_file = _P_v4_ctl('/root/finlab/robots/robot_state_test.json')
 
-        **Вывод:** v4 — **не для торговли**. **Песочница** для будущих идей.
-        """)
-
-        # Статус сервиса
-        import subprocess as _sp_v4
-        _v4_running = _sp_v4.run(['systemctl', 'is-active', 'finlab-robot-test'], capture_output=True, text=True).stdout.strip() == 'active'
-        if _v4_running:
-            st.success("🟢 Сервис запущен (но v4 не торгует — disabled)")
-        else:
-            st.info("⚪ Сервис не запущен (disabled) — это норма для песочницы")
-
-        # Config v4
-        import json as _json_v4
-        from pathlib import Path as _P_v4
-        _v4_cfg_path = _P_v4('/root/finlab/FinLabPy/My_Indicators/pairs_config_test.json')
-        if _v4_cfg_path.exists():
+        # статус
+        _is_active = _sp_v4_ctl.run(['systemctl', 'is-active', 'finlab-robot-test'], capture_output=True, text=True).stdout.strip() == 'active'
+        _state = {}
+        if _state_file.exists():
             try:
-                _v4_cfg = _json_v4.loads(_v4_cfg_path.read_text())
-                _v4_enabled = [k for k, p in _v4_cfg.get('pairs', {}).items() if p.get('enabled')]
-                st.caption(f"Config v4: {len(_v4_enabled)} enabled-пар | last_updated: {_v4_cfg.get('last_updated', '—')}")
+                import json as _j_v4
+                _state = _j_v4.loads(_state_file.read_text())
             except Exception:
-                st.caption("Config v4: не удалось прочитать")
-        else:
-            st.caption("Config v4: не найден (pairs_config_test.json)")
+                pass
+        _paused = _state.get('paused', None)
+        _running = _state.get('running', None)
 
-        # БД v4 (если есть)
-        _v4_db = _P_v4('/root/finlab/robots/pairs_robot_test.db')
-        if _v4_db.exists():
-            st.caption(f"БД v4: {_v4_db} (exists)")
-        else:
-            st.caption("БД v4: не найдена (pairs_robot_test.db) — норма (v4 не торгует)")
+        _c1, _c2, _c3 = st.columns(3)
+        with _c1:
+            if st.button("▶️ Старт", key="v4_start_btn", disabled=not _is_active):
+                _cmd_file.write_text("START")
+                st.success("START отправлен")
+        with _c2:
+            if st.button("⏸️ Пауза", key="v4_pause_btn", disabled=not _is_active):
+                _cmd_file.write_text("PAUSE")
+                st.warning("PAUSE отправлен")
+        with _c3:
+            if st.button("⏹️ Стоп", key="v4_stop_btn", disabled=not _is_active):
+                _cmd_file.write_text("STOP")
+                st.error("STOP отправлен")
 
-        st.info("ℹ️ **v4 — песочница.** Для торговли используйте v2 (M10+H4+H1) или v3 (H4, Кальман).")
+        # статус-строка
+        _status_txt = f"Сервис: {'🟢 active' if _is_active else '⚪ inactive'}"
+        if _running is not None:
+            _status_txt += f" | running={_running}"
+        if _paused is not None:
+            _status_txt += f" | paused={_paused}"
+        st.caption(_status_txt)
+
+        # ===== РАСКРЫВАШКА: ЧТО АНАЛИЗИРУЕТ v4 =====
+        with st.expander("🔍 Что и как анализирует v4 (раскрыть)", expanded=False):
+            st.markdown("""
+**v4 — песочница парной торговли.** Тестирует **combined_v1** (Соколов, гл. 2.1.34) на **одной** паре.
+
+**Что тестируется:**
+- **BANE-BN_M10** — **combined_v1**: два коинтеграционных вектора (Йохансен), комбинированный спред с весами по формуле **2.1.34** (без корреляции). β обновляется **раз в день** (`scripts/update_combined_betas.py`, cron 19:00 пн–сб).
+- **Остальные 8 пар** — **baseline** (rolling OLS residuals, `use_coint=True`, `resid_window=60`).
+
+**Почему только BANE-BN:**
+- У 8 из 9 пар rank≥2 **ρ ≈ 1** (два вектора почти идентичны → комбинирование не даёт прироста).
+- У **BANE-BN** ρ = 0.68 (M10) → **есть независимость** → combined_v1 **имеет смысл**.
+- Walk-forward (8 фолдов): baseline PnL +23.90 / Sharpe 2.77 / 13 trades; **combined_v1** PnL **+35.21** / Sharpe **11.28** / **28 trades** (PnL +47%, trades ×2.15, Sharpe ×4).
+
+**Параметры:**
+- `entry_z=1.8`, `exit_z=0.5` (как v2).
+- ML-фильтр: BELU-NB, SFIN-SH, GD-PT (3 модели, proba ≥ 0.5 — PASS).
+- VK-уведомления: с пометкой **[v4]** / **[v4][combined_v1]**.
+
+**Отличие от v2:**
+- v2 — **торговый** робот (baseline для всех).
+- v4 — **песочница** для combined_v1. Если подтвердит — внедрим в v2 (только BANE-BN).
+            """)
+
+        # ===== МЕТРИКИ (из БД v4) =====
+        import sqlite3 as _sq_v4
+        _db_v4 = _P_v4_ctl('/root/finlab/robots/pairs_robot_test.db')
+        if _db_v4.exists():
+            try:
+                _conn = _sq_v4.connect(_db_v4)
+                _cur = _conn.cursor()
+                _cur.execute("SELECT COUNT(*), COALESCE(SUM(pnl),0) FROM trades WHERE action='CLOSE'")
+                _n_tr, _pnl = _cur.fetchone()
+                _cur.execute("SELECT COUNT(*) FROM trades WHERE action='CLOSE' AND pnl > 0")
+                _n_win = _cur.fetchone()[0] or 0
+                _wr = (_n_win / _n_tr) if _n_tr > 0 else 0.0
+                _cur.execute("SELECT COUNT(*) FROM positions WHERE status='OPEN'")
+                _n_open = _cur.fetchone()[0] or 0
+                _cur.execute("SELECT COUNT(*) FROM signals WHERE time >= datetime('now','-24 hours')")
+                _n_sig = _cur.fetchone()[0] or 0
+                _conn.close()
+
+                _m1, _m2, _m3, _m4 = st.columns(4)
+                _m1.metric("Сделок (closed)", _n_tr)
+                _m2.metric("PnL, ₽", f"{_pnl:+.2f}")
+                _m3.metric("WR", f"{_wr*100:.1f}%" if _n_tr > 0 else "—")
+                _m4.metric("Открытых / сигналов 24ч", f"{_n_open} / {_n_sig}")
+            except Exception as _e:
+                st.caption(f"⚠️ метрики v4: {_e}")
+        else:
+            st.caption("БД v4: не найдена")
+
+        st.divider()
+
 
     elif robot_tab == "📈 Робот акций":  # DEAD CODE (таб убран 02.10.2026, заменён на TradeStats)
         st.subheader("📈 Робот акций")

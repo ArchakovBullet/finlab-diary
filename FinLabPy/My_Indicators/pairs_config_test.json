@@ -506,7 +506,12 @@
       },
       "total_rows": 1236,
       "last_optimized": "2026-08-23 20:26:23",
-      "enabled": true
+      "enabled": true,
+      "combined_v1": true,
+      "combined_betas": [
+        -0.9401837781845079,
+        1.1070070355752133
+      ]
     },
     "CHMF-CK_M10": {
       "pair_name": "CHMF-CK_M10",
