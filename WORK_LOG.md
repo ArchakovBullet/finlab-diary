@@ -2480,3 +2480,33 @@
 ### Git
 
 - (после commit)
+
+
+---
+
+## 2026-10-24 (вечер-3) — check_collector_logs: ложные срабатывания
+
+### Проблема
+
+- `check_collector_logs.py` искал `ERROR` во **всех** логах, включая `ai_daily_cron.log` (AI-отчёт).
+- В отчёте AI есть текст «**ERROR**» (в контексте рекомендаций) → скрипт считал это ошибкой сборщика.
+- VK-уведомления: «Обнаружены ошибки в логах сборщиков (24.10 20:00): ai_daily_cron.log — …».
+
+### Фикс
+
+- Исключены **не-сборщики** из проверки:
+  - `ai_daily_cron.log`, `ai_weekly_cron.log` (AI-отчёты).
+  - `streamlit.log` (дашборд).
+  - `robot.log`, `robot_v2.log`, `robot_v3.log`, `robot_test.log` (роботы).
+  - `pairs_quarantine.log`, `pairs_quarantine_cron.log` (карантин).
+- Проверка: `✅ Ошибок в логах не обнаружено (24.10 20:34)`.
+
+### Git
+
+- Commit: `57e749a` (check_collector_logs: исключены не-сборщики).
+
+### Замечание
+
+- **AI-daily** в отчёте **рекомендовал** убрать SFIN-SH_M10 из enabled (corr 0.23) и проверить BR-GAZPF_H4 (corr 0.12).
+- **Уже сделано**: SFIN-SH_M10 — в карантине (`enabled=False`), BR-GAZPF_H4 — `enabled=False` (v1).
+- **AI не знает** об этом (отчёт за 19:30, изменения — позже). **Позже** — обновить AI-контекст (чтобы видел актуальный `enabled`).
