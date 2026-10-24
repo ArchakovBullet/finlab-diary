@@ -4610,15 +4610,16 @@ elif page == "📊 Торговые роботы":
 
         st.markdown("---")
 
-        # Настройки робота
-        st.subheader("⚙️ Настройки")
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            st.number_input("Депозит (₽)", value=100_000, step=10_000, key="robotDEPOSIT")
-        with col_b:
-            st.selectbox("Тип объёма", ["Контракты", "Валюта контракта", "Процент от депозита"], key="robot_volume_type")
-        with col_c:
-            st.number_input("Объём", value=1.0, step=1.0, key="robot_volume")
+        # Настройки робота — ЗАКОММЕНТИРОВАНО 24.10.2026 (не используется роботом, значения не сохраняются)
+        # TODO: реализовать полноценно (связать UI с роботом) — позже
+        # st.subheader("⚙️ Настройки")
+        # col_a, col_b, col_c = st.columns(3)
+        # with col_a:
+        #     st.number_input("Депозит (₽)", value=100_000, step=10_000, key="robotDEPOSIT")
+        # with col_b:
+        #     st.selectbox("Тип объёма", ["Контракты", "Валюта контракта", "Процент от депозита"], key="robot_volume_type")
+        # with col_c:
+        #     st.number_input("Объём", value=1.0, step=1.0, key="robot_volume")
 
         st.markdown("---")
 
