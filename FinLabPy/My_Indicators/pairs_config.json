@@ -2705,7 +2705,7 @@
       }
     },
     "BR-GAZPF_H4": {
-      "enabled": true,
+      "enabled": false,
       "best_params": {
         "entry_z": 2.0,
         "exit_z": 0.5,
