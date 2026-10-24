@@ -61,9 +61,21 @@ def check_recent_logs():
     problems = []
     new_errors = []
     
+    # Исключаем НЕ-сборщики (AI-отчёты, роботы, дашборд, служебные)
+    _SKIP_NAMES = {
+        'collector_logs_check.log',   # собственный лог
+        'ai_daily_cron.log',          # AI-отчёт (не сборщик)
+        'ai_weekly_cron.log',         # AI-отчёт (не сборщик)
+        'streamlit.log',              # дашборд (не сборщик)
+        'robot.log',                  # v1 (робот)
+        'robot_v2.log',               # v2 (робот)
+        'robot_v3.log',               # v3 (робот)
+        'robot_test.log',             # v4 (робот)
+        'pairs_quarantine.log',       # карантин (не сборщик)
+        'pairs_quarantine_cron.log',  # карантин (не сборщик)
+    }
     for log_file in LOGS_DIR.glob('*.log'):
-        # Пропускаем собственный лог
-        if log_file.name == 'collector_logs_check.log':
+        if log_file.name in _SKIP_NAMES:
             continue
         try:
             mtime = datetime.fromtimestamp(log_file.stat().st_mtime)
