@@ -1,5 +1,90 @@
 
 import streamlit as st
+
+def render_lqdt_comparison(closed_df, total_pnl, deposit=100000):
+    """LQDT-сравнение (бенчмарк). Универсально для v1/v2/v3/v4."""
+    import pandas as pd
+    from pathlib import Path as _P
+    import streamlit as st
+
+    if closed_df is None or len(closed_df) == 0:
+        st.info("Закрытых сделок пока нет")
+        return
+
+    st.markdown("---")
+    st.subheader("📊 Сравнение с LQDT (бенчмарк)")
+    st.caption("LQDT — фонд ликвидности MOEX (безрисковый ориентир). Сравниваем доходность за одинаковые периоды.")
+
+    _lqdt_file = _P('/root/finlab/data/candles/LQDT_D1.parquet')
+    if not _lqdt_file.exists():
+        st.info("LQDT данные не найдены")
+        return
+
+    _lqdt_df = pd.read_parquet(_lqdt_file)
+    _lqdt_df['begin'] = pd.to_datetime(_lqdt_df['begin'])
+    _lqdt_df = _lqdt_df.sort_values('begin')
+
+    # === ОБЩЕЕ СРАВНЕНИЕ ===
+    _robot_start = pd.to_datetime(closed_df['entry_time'].min())
+    _robot_end = pd.to_datetime(closed_df['exit_time'].max())
+    _lqdt_period = _lqdt_df[(_lqdt_df['begin'] >= _robot_start) & (_lqdt_df['begin'] <= _robot_end)]
+    if len(_lqdt_period) < 2:
+        _lqdt_period = _lqdt_df[_lqdt_df['begin'] <= _robot_end].tail(2)
+
+    if len(_lqdt_period) > 1:
+        _lqdt_start_price = _lqdt_period['close'].iloc[0]
+        _lqdt_end_price = _lqdt_period['close'].iloc[-1]
+        _lqdt_return = (_lqdt_end_price - _lqdt_start_price) / _lqdt_start_price * 100
+        _robot_return = total_pnl / deposit * 100
+        _diff = _robot_return - _lqdt_return
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.metric("📈 Общий PnL", f"{total_pnl:+.1f}₽")
+        with c2:
+            st.metric("🤖 Робот (доходность)", f"{_robot_return:+.2f}%")
+        with c3:
+            st.metric("📊 LQDT (бенчмарк)", f"{_lqdt_return:+.2f}%")
+
+        if _diff > 0:
+            st.success(f"✅ Робот опережает LQDT на {_diff:+.2f}%")
+        else:
+            st.error(f"❌ Робот отстаёт от LQDT на {_diff:+.2f}%")
+    else:
+        st.info("Недостаточно данных LQDT для сравнения")
+
+    # === СРАВНЕНИЕ ПО ПАРАМ ===
+    st.markdown("---")
+    st.subheader("📋 Доходность по парам vs LQDT")
+    st.caption("Каждая пара сравнивается с LQDT за тот же период (от входа до выхода).")
+
+    _pair_comparison = []
+    for _pair_name, _group in closed_df.groupby('pair_name'):
+        _group = _group.sort_values('entry_time')
+        _pair_start = pd.to_datetime(_group['entry_time'].iloc[0])
+        _pair_end = pd.to_datetime(_group['exit_time'].iloc[-1])
+        _pair_pnl = _group['pnl'].sum()
+        _lqdt_pair = _lqdt_df[(_lqdt_df['begin'] >= _pair_start) & (_lqdt_df['begin'] <= _pair_end)]
+        if len(_lqdt_pair) > 1:
+            _lqdt_pair_return = (_lqdt_pair['close'].iloc[-1] - _lqdt_pair['close'].iloc[0]) / _lqdt_pair['close'].iloc[0] * 100
+            _pair_robot_return = _pair_pnl / deposit * 100
+            _pair_diff = _pair_robot_return - _lqdt_pair_return
+            _pair_comparison.append({
+                'Пара': _pair_name,
+                'Сделок': len(_group),
+                'PnL': f"{_pair_pnl:+.1f}₽",
+                'Доходность пары': f"{_pair_robot_return:+.2f}%",
+                'LQDT за период': f"{_lqdt_pair_return:+.2f}%",
+                'Разница': f"{_pair_diff:+.2f}%",
+                'Результат': '✅ Лучше' if _pair_diff > 0 else '❌ Хуже'
+            })
+
+    if _pair_comparison:
+        st.dataframe(pd.DataFrame(_pair_comparison), use_container_width=True, hide_index=True)
+    else:
+        st.info("Нет данных для сравнения по парам")
+
+
 from pathlib import Path
 import pandas as pd
 import os
@@ -4360,6 +4445,19 @@ elif page == "📊 Торговые роботы":
 
     if robot_tab == "📊 Парная торговля":
         st.subheader("📊 Робот парной торговли")
+        with st.expander("🔍 Что и как анализирует v1 (раскрыть)", expanded=False):
+            st.markdown("""
+**v1 — эталон.** Не трогаем. Служит базой для сравнения.
+
+**Логика:**
+- **Baseline** (простой спред: `log_a - log_b`), без rolling OLS.
+- **Окно:** 07:00–18:00 МСК.
+- **entry_z=2.5**, exit_z=0.5.
+- **Пары:** из `pairs_config.json` (enabled).
+- **ML:** 3 модели (BELU-NB, GD-PT, SFIN-SH).
+
+**Отличие от v2:** окно уже (07:00–18:00), entry_z выше (2.5), нет rolling OLS.
+            """)
         st.info("Бумажный режим — виртуальные сделки без реального исполнения")
 
         # Проверка статуса робота
@@ -4727,6 +4825,20 @@ elif page == "📊 Торговые роботы":
 
     elif robot_tab == "📊 Парная торговля_v2":
         st.subheader("📊 Парная торговля v2 (эксперимент)")
+        with st.expander("🔍 Что и как анализирует v2 (раскрыть)", expanded=False):
+            st.markdown("""
+**v2 — рабочий робот.** Торгует. Лучший PnL за неделю (+149.88₽, WR 87.5%).
+
+**Логика:**
+- **Rolling OLS residuals** (`use_coint=True`, `resid_window=60`).
+- **Окно:** 07:00–23:00 МСК.
+- **entry_z:** 1.8 (M10), 2.0–2.5 (H4).
+- **Пары:** 10 enabled (из `pairs_config_v2.json`).
+- **ML:** 3 модели (BELU-NB, GD-PT, SFIN-SH).
+- **Карантин:** SFIN-SH_M10 (corr < 0.3 x3) — авто-карантин 19:45.
+
+**Отличие от v1:** шире окно (до 23:00), ниже entry_z (1.8 vs 2.5), rolling OLS.
+            """)
         st.warning("🧪 Экспериментальный робот. Окно торговли 07:00–23:00 МСК. Сейчас paused=True (безопасно).")
 
         import subprocess as _sp_v2
@@ -4916,13 +5028,33 @@ elif page == "📊 Торговые роботы":
                 _c3.metric("WR (%)", f"{_v2_wr:.1f}")
                 _v2_disp = _v2_closed[['pair_name', 'direction', 'pnl', 'entry_z', 'entry_time', 'exit_time']].copy() if set(['pair_name','direction','pnl','entry_z','entry_time','exit_time']).issubset(_v2_closed.columns) else _v2_closed
                 st.dataframe(_v2_disp, use_container_width=True, hide_index=True)
+                # LQDT-сравнение (v2)
+                try:
+                    render_lqdt_comparison(_v2_closed, _v2_pnl)
+                except Exception as _e:
+                    st.caption(f"LQDT v2: {_e}")
             else:
                 st.info("Сделок пока нет")
 
             _conn_v2.close()
 
     elif robot_tab == "📊 Парная торговля_v3":
-        st.subheader("📊 Парная торговля v2 (эксперимент)")
+        st.subheader("📊 Парная торговля v3 (эксперимент)")
+        with st.expander("🔍 Что и как анализирует v3 (раскрыть)", expanded=False):
+            st.markdown("""
+**v3 — эксперимент.** Кальман + баскет. 0 сделок (наблюдаем).
+
+**Логика:**
+- **Адаптивная β** (Кальман-фильтр).
+- **Только H4.**
+- **Окно:** 07:00–23:00 МСК.
+- **entry_z:** 2.0–2.5 (H4).
+- **Пары:** 4 H4 (GD-SV, PD-SV, PT-SV, LK-IMOEXF).
+- **ML:** нет (4 пары без ML).
+- **Сделок 0:** entry_z не достигается (H4, тихий рынок).
+
+**Отличие от v2:** Кальман (адаптивная β), только H4, 4 пары, нет ML.
+            """)
         st.warning("🧪 Экспериментальный робот. Окно торговли 07:00–23:00 МСК. Сейчас paused=True (безопасно).")
 
         import subprocess as _sp_v2
@@ -4963,7 +5095,7 @@ elif page == "📊 Торговые роботы":
             except Exception:
                 st.caption("Config v2: не удалось прочитать")
 
-        _v3_db = _P_v2('/root/finlab/robots/pairs_robot_v2.db')
+        _v3_db = _P_v2('/root/finlab/robots/pairs_robot_v3.db')
 
         # === КНОПКИ УПРАВЛЕНИЯ v2 ===
         st.markdown("### 🎛️ Управление")
@@ -5046,7 +5178,7 @@ elif page == "📊 Торговые роботы":
 
         # БД v2
         if not _v3_db.exists():
-            st.error("БД v2 не найдена: pairs_robot_v2.db")
+            st.error("БД v3 не найдена: pairs_robot_v3.db")
         else:
             _conn_v2 = _sq_v2.connect(str(_v3_db))
 
@@ -5112,6 +5244,11 @@ elif page == "📊 Торговые роботы":
                 _c3.metric("WR (%)", f"{_v3_wr:.1f}")
                 _v3_disp = _v3_closed[['pair_name', 'direction', 'pnl', 'entry_z', 'entry_time', 'exit_time']].copy() if set(['pair_name','direction','pnl','entry_z','entry_time','exit_time']).issubset(_v3_closed.columns) else _v3_closed
                 st.dataframe(_v3_disp, use_container_width=True, hide_index=True)
+                # LQDT-сравнение (v3)
+                try:
+                    render_lqdt_comparison(_v3_closed, _v3_pnl)
+                except Exception as _e:
+                    st.caption(f"LQDT v3: {_e}")
             else:
                 st.info("Сделок пока нет")
 
@@ -5141,16 +5278,23 @@ elif page == "📊 Торговые роботы":
         _running = _state.get('running', None)
 
         _c1, _c2, _c3 = st.columns(3)
+        # Логика как в v2:
+        # Старт — активна, если сервис active и робот НЕ running (или на паузе)
+        # Пауза — активна, если сервис active и робот running и НЕ на паузе
+        # Стоп — активна всегда (если сервис active)
+        _can_start = _is_active and ((_running is False) or (_paused is True))
+        _can_pause = _is_active and (_running is True) and (_paused is False)
+        _can_stop = _is_active
         with _c1:
-            if st.button("▶️ Старт", key="v4_start_btn", disabled=not _is_active):
+            if st.button("▶️ Старт", key="v4_start_btn", disabled=not _can_start):
                 _cmd_file.write_text("START")
                 st.success("START отправлен")
         with _c2:
-            if st.button("⏸️ Пауза", key="v4_pause_btn", disabled=not _is_active):
+            if st.button("⏸️ Пауза", key="v4_pause_btn", disabled=not _can_pause):
                 _cmd_file.write_text("PAUSE")
                 st.warning("PAUSE отправлен")
         with _c3:
-            if st.button("⏹️ Стоп", key="v4_stop_btn", disabled=not _is_active):
+            if st.button("⏹️ Стоп", key="v4_stop_btn", disabled=not _can_stop):
                 _cmd_file.write_text("STOP")
                 st.error("STOP отправлен")
 
