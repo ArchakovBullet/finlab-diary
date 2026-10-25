@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """ai_weekly_report.py — недельный отчёт через VseGPT + email.
-from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4, get_discovery_summary
-
 
 Читает daily-отчёты за неделю, pairs_robot.db за неделю, ai_context.md.
 Отправляет в DeepSeek, сохраняет в logs/ai_weekly/, шлёт email.
@@ -17,6 +15,14 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.header import Header
 from pathlib import Path
+# Импорт AI-контекста (v4 + discovery)
+from ai_data_context import (
+    get_robot_state_v4,
+    get_trades_history_v4,
+    get_signals_summary_v4,
+    get_discovery_summary,
+)
+
 
 import requests
 from dotenv import load_dotenv
