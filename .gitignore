@@ -96,3 +96,4 @@ FinLabPy/My_Indicators/pairs_config_test.json
 logs/
 __pycache__/
 *.pyc
+robots/tf_fresh_state_*.json
