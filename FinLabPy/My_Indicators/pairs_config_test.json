@@ -509,8 +509,8 @@
       "enabled": true,
       "combined_v1": true,
       "combined_betas": [
-        -0.9389799926187653,
-        1.3363950319449267
+        -0.9424538623063964,
+        0.964219773406687
       ]
     },
     "CHMF-CK_M10": {
@@ -2384,7 +2384,7 @@
       },
       "total_rows": 7332,
       "last_optimized": "2026-10-19 21:35:37 (H1 walk-forward: net_pnl +1.30, n=413)",
-      "enabled": true
+      "enabled": false
     },
     "LKOH-ROSN_H1": {
       "pair_name": "LKOH-ROSN_H1",
@@ -2769,5 +2769,5 @@
       "enabled": false
     }
   },
-  "last_updated": "2026-10-20 20:18:22 (v4 test — копия v2)"
+  "last_updated": "2026-10-26 22:13:31 (LKOH-HYDR_H1 disabled: stock+stock)"
 }
