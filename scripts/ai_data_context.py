@@ -23,6 +23,8 @@ CANDLES = ROOT / 'data' / 'candles'
 CONFIG = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config.json'
 QUARANTINE_STATE = ROOT / 'logs' / 'pairs_quarantine_state.json'
 
+DEAD_TICKERS = {"IN","PIKK","BY","RF","UT","GU","CS","VGSB","KZ"}  # мёртвые тикеры (не торгуются, freshness-шум)
+
 
 def get_freshness():
     """Свежесть ключевых файлов (M10/H1/H4/D1)."""
@@ -37,6 +39,9 @@ def get_freshness():
         fresh = 0
         oldest = 0
         for f in files:
+            stem = f.stem.split('_')[0]
+            if stem in DEAD_TICKERS:
+                continue
             mtime = datetime.fromtimestamp(f.stat().st_mtime)
             age_h = (now - mtime).total_seconds() / 3600
             if age_h < 25:
