@@ -2745,3 +2745,48 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-26 (вечер-5) — тесты п.15/17 (MAX_HOLD/exit_z/max_z) + правка v4
+
+### Результаты walk-forward (scripts/max_hold_exit_z_test.py, logs/max_hold_exit_z_2026-10-26_2225.csv)
+
+Параметры по одному за раз (baseline=off), 3 пары × walk-forward (train=30д, test=7д, шаг=7д).
+
+**MAX_HOLD (off / 90 / 120 мин) — ХУЖЕ baseline по всем парам:**
+- BANE-BN: Sharpe 4.91 → 3.85 (90) / 3.64 (120).
+- BELU-NB: 5.57 → 3.33 (90) / 5.09 (120).
+- SFIN-SH: 6.96 → 4.21 (90) / 5.37 (120).
+- **Вывод: не внедряем.** IDEAS п.15 (MAX_HOLD) → `done` (не работает).
+
+**exit_z (off=0.5 / 0.3 / 0.0):**
+- BANE-BN: 4.91 → **8.04 (+3.12)** при 0.3; 0.00 при 0.0.
+- BELU-NB: 5.57 → **6.53 (+0.96)** при 0.3; 0.00 при 0.0.
+- SFIN-SH: 6.96 → 6.77 (−0.20) при 0.3; 0.00 при 0.0.
+- PnL немного падает (−0.007…−0.010), Sharpe **значительно растёт** (быстрее выход).
+- **Вывод: exit_z=0.3 — кандидат в v4.** exit_z=0.0 — не работает (0 Sharpe).
+
+**max_z (off=None / 4.0 / 3.5 / 3.0):**
+- BANE-BN: 4.91 → 5.77 (+0.86) / 5.74 (+0.82) / 5.70 (+0.78).
+- BELU-NB: 5.57 → 5.82 (+0.25) / 6.19 (+0.63) / 6.20 (+0.63).
+- SFIN-SH: 6.96 → 7.51 (+0.55) / 7.51 (+0.55) / 7.63 (+0.67).
+- **Вывод: max_z (3.0/3.5/4.0) — лучше baseline по всем парам.** Кандидат в v4, лучший компромисс — **3.5**.
+
+**p-hacking оговорка:** 3 пары, 8 фолдов — Sharpe может быть завышен. Внедряем **в v4 (тест)**, не в v2. Через 1–2 недели — сравнить v4 vs v2.
+
+### Правка v4 (с согласия): exit_z=0.3 + max_z=3.5 для M10-пар
+
+- **Код** `robots/pairs_robot_test.py`: добавлен `max_z = _bp.get('max_z', None)` + проверка `if max_z is not None and abs(current_z) > max_z: skip_signal(..., 'z_too_extreme'); continue`. Бэкап: `pairs_robot_test.py.bak_20261026_223107`. `py_compile OK`.
+- **Конфиг** `FinLabPy/My_Indicators/pairs_config_test.json`: для SFIN-SH_M10, BANE-BN_M10, BELU-NB_M10 — `exit_z=0.3`, `max_z=3.5`. Бэкап: `pairs_config_test.json.bak_20261026_223107`.
+- **Рестарт v4:** `systemctl restart finlab-robot-test` → `active`. Лог `logs/robot_test.log`: старт без ошибок (ML загружены, циклы идут).
+- **Проверка signals:** пока только `z_below_entry` (|z| < 1.8) — норма, рынок тихий. `z_too_extreme` появится при |z| > 3.5 (позже).
+- **v2 не трогали** (правило 13).
+
+### IDEAS
+
+- п.15: MAX_HOLD → `done` (не работает); exit_z=0.3 → `pending` (в v4 с 26.10, наблюдать 1–2 недели); max_z=3.5 → `pending` (в v4 с 26.10, наблюдать).
+
+### Git
+
+- (после commit)

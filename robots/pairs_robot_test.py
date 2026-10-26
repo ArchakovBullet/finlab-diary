@@ -1217,6 +1217,7 @@ def check_signals_by_tf(pairs_config, tf):
             window = _bp.get('window', 20)
             entry_z = _bp.get('entry_z', ENTRY_Z_DEFAULT)
             exit_z = _bp.get('exit_z', EXIT_Z_DEFAULT)
+            max_z = _bp.get('max_z', None)  # верхний порог |z| (защита от экстремумов)
             use_coint = _bp.get('use_coint', False)
             resid_window = _bp.get('resid_window', 60)
             _combined = _bp.get('combined_v1', False)
@@ -1318,6 +1319,14 @@ def check_signals_by_tf(pairs_config, tf):
                 # Проверяем вход (с фильтрами)
                 if _is_trading_time and _vol_ok and _corr_ok and _expiry_ok and _new_ok:
                     _signal = None
+                    if max_z is not None and abs(current_z) > max_z:
+                        print(f'  🚫 {pair_name}: |z|={abs(current_z):.2f} > max_z={max_z} — пропуск (экстремум)')
+                        skip_signal(pair_name, base_pair, tf, current_z,
+                                    result.get('corr', 0.0), result.get('beta', 0.0), spread_trend,
+                                    None, 'z_too_extreme',
+                                    entry_z_rule=entry_z, exit_z_rule=exit_z,
+                                    price_a=price_a, price_b=price_b)
+                        continue
                     if current_z >= entry_z and spread_trend > 0:
                         _signal = 'SHORT_SPREAD'
                     elif current_z <= -entry_z and spread_trend < 0:
