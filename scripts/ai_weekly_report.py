@@ -5,6 +5,7 @@
 Отправляет в DeepSeek, сохраняет в logs/ai_weekly/, шлёт email.
 """
 import argparse
+from ai_data_context import get_index_divergence
 import json
 import os
 import smtplib
@@ -205,6 +206,20 @@ def main():
 
     data = r.json()
     answer = data['choices'][0]['message']['content']
+
+    # === Блок: Робот индексный_v1 (divergence SBER/GAZP vs MOEXFN) ===
+    try:
+        _idx = get_index_divergence()
+        if _idx:
+            _lines = ["\n---\n\n## 📈 Робот индексный_v1 — divergence SBER/GAZP vs MOEXFN (D1)\n",
+                      "| Тикер | ret_stock | ret_sector | divergence | z | signal | date |",
+                      "|---|---|---|---|---|---|---|"]
+            for _t, _d in _idx.items():
+                _lines.append(f"| {_t} | {_d.get('ret_stock')} | {_d.get('ret_sector')} | {_d.get('divergence')} | {_d.get('z')} | {_d.get('signal')} | {_d.get('date')} |")
+            _lines.append("\n**Промпт для AI:** На основе divergence SBER/GAZP vs MOEXFN — есть ли сигнал (LONG/SHORT при divergence)? Предложи гипотезы (не внедрять без walk-forward).")
+            answer = answer + "\n".join(_lines)
+    except Exception as _e:
+        answer = answer + f"\n[divergence block error: {_e}]\n"
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     iso = datetime.now().isocalendar()
