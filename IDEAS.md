@@ -343,7 +343,7 @@ ho pprox 1\), combined не работает).
 - **Ссылки:** WORK_LOG 26.10 (вечер-3), `tickers_config.json` (stocks/futures).
 
 ### 29. Algopack-фон в AI-отчёт (по активам + по парам)
-- **Статус:** `pending` (27.10.2026 — после обсуждения AI-исследования Algopack).
+- **Статус:** `in_progress` (27.10.2026 — пилот SBER/GAZP/LKOH выполнен: сектор MOEXFN +0.47…+0.66 (n=333) — сильная связь; HI2 lag8 +0.37…+0.42 (n=69) — интересно; FutOI H1 слабо; MegaAlerts мало; следующий шаг — walk-forward MOEXFN divergence).
 - **Что:** в AI-daily/weekly добавить блок «Algopack-фон»:
   - **По активам** (например, SBER/SBERF): FutOI (физ/юр лонги/шорты), MegaAlerts (крупные сделки), HI2 (концентрация HHI), TradeStats (объёмы/волатильность), секторный индекс (MOEXFN и др.), RVI.
   - **По парам** (v2/v3/v4): FutOI/MegaAlerts/HI2/TradeStats по **ногам** пары (divergence между ногами, extremes, концентрация) — **контекст для AI**, не автоматика.

@@ -2790,3 +2790,48 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-27 (вечер) — AI-исследование Algopack: пилот SBER/GAZP/LKOH (сектор, HI2, FutOI, MegaAlerts)
+
+### Скрипт
+
+- `scripts/ai_algopack_research.py` (read-only): SBER/GAZP/LKOH × 6 источников (price H1, FutOI H1, TradeStats H1, MegaAlerts, HI2 D1, MOEXFN D1).
+- CSV: `logs/ai_algopack_multi_2026-10-27_2310.csv` (446 строк).
+- Бэкап старого (SBER-only): `scripts/ai_algopack_research.py.bak_20261027_230403`.
+
+### Загрузка
+
+- SBER: price 7825, futoi 2491 (SBERF), tradestats 32452, mega 22/1.
+- GAZP: price 7828, futoi 2491 (GAZPF), tradestats 32452, mega 35/20.
+- LKOH: price 7825, futoi **0** (LKOHF нет в futoi), tradestats 32452, mega 54/0.
+
+### Результаты (топ-связи)
+
+**(A) Сектор MOEXFN → акции — САМАЯ СИЛЬНАЯ и СТАБИЛЬНАЯ:**
+- SBER: corr +0.663 (n=333), GAZP +0.605 (n=333), LKOH +0.469 (n=333). **Стабильно на трёх активах** → не шум. **Гипотеза 1 (divergence SBER/GAZP/LKOH vs MOEXFN)** — приоритет.
+
+**(B) HI2 lag8 → акции — интересно, но n=69 (мало):**
+- `hhi_netflow_sell [SBER]` (lag 8) → SBER +0.422 / GAZP +0.388 / LKOH +0.372 (n=69). **Стабильно на трёх активах** (возможно, общий фактор — SBER-лидер). **Требует walk-forward** (n=69 — может быть шум).
+- `hhi_agressive [LKOH]` (lag 0) → LKOH −0.316 (n=69) — отрицательная.
+
+**(C) FutOI H1 → цена — слабо:** не в топ-20 (corr < 0.2). **FutOI D1 — не проверен** (отдельный скрипт).
+
+**(D) MegaAlerts — мало данных:** SBER 22/1, GAZP 35/20, LKOH 54/0. **n=18–54** — статистически слабо. Не в топ-20.
+
+**(E) Divergence FutOI vs цена (H1) — нулевой:** mean_fwd_ret ≈ 0, wr ≈ 0.5. **Не работает.**
+
+### Следующее
+
+- **Walk-forward по гипотезе 1 (MOEXFN divergence):** `scripts/moexfn_divergence_test.py` (SBER/GAZP/LKOH vs MOEXFN, forward return 1/2/4/8 дней, baseline без divergence).
+- **Потом:** HI2 lag8 (walk-forward, n=69 — с оговоркой), FutOI D1 (отдельный скрипт), Algopack-фон в AI-daily/weekly (по активам + по парам).
+- **v2/v3/v4 — не трогаем** (код). **v4** — тест при подтверждении (с согласия).
+
+### IDEAS
+
+- п.29 (Algopack-фон в AI-отчёт) → `in_progress` (пилот выполнен, результаты см. выше; walk-forward по MOEXFN divergence — следующий шаг).
+
+### Git
+
+- (после commit)
