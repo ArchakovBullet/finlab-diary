@@ -2944,3 +2944,26 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-28 (ночь) — SFIN-SH_M10 disabled в v2; дашборд: index_v1 в табах + обзоре
+
+### Что сделано
+
+- **v2 `pairs_config_v2.json`:** `SFIN-SH_M10.enabled = False` (карантин corr<0.5, шум убран). Бэкап: `pairs_config_v2.json.bak_20261028_000755`. **С согласия** (правило 13).
+- **Дашборд `app_v2.py`:**
+  - Список табов: добавлен «📈 Робот индексный_v1 (test)».
+  - Обзор: `_robots_stats['📈 Робот индексный_v1 (test)']` (PnL, WR, open, db).
+  - Бэкап: `app_v2.py.bak_20261028_000755`.
+- **Проверка:** `py_compile OK`; дашборд `active`; **commit `3bf9d37`**, push в origin + diary.
+
+### Следующее
+
+- **Блок 4:** наблюдение 1–2 недели (v4: exit_z=0.3/max_z=3.5; index_robot_v1: divergence SBER/GAZP; AI-отчёт: divergence). **Пассивно.**
+- **Через 1–2 недели** — сравнение с бэктестом (Sharpe 1.9–2.75), решение по v4/index_robot_v1.
+- **v2/v3/v4 — не трогаем** (код). **v4-фильтр (B) — позже** (если index_robot_v1 покажет).
+
+### Git
+
+- (после commit)
