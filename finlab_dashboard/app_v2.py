@@ -6126,6 +6126,101 @@ elif page == "📊 Торговые роботы":
         else:
             st.info("Закрытых сделок пока нет (v2)")
 
+    elif robot_tab == "📈 Робот индексный_v1 (test)":
+        st.subheader("📈 Робот индексный_v1 (test)")
+        with st.expander("🔍 Что и как работает (раскрыть)", expanded=False):
+            st.markdown("""
+**Робот индексный_v1 — paper.** Одиночная торговля SBER/GAZP по divergence с MOEXFN (индекс финсектора).
+
+**Логика:**
+- **D1:** ret_акция, ret_сектор (MOEXFN).
+- **Divergence:** знаки разные (акция ↑, сектор ↓ или наоборот).
+- **Вход:** в сторону сектора (сектор ↑, акция ↓ → LONG акции; сектор ↓, акция ↑ → SHORT акции).
+- **Выход:** через H=1 день (следующий D1 close) ИЛИ |z| ≤ 0.5 (z спреда акция/сектор).
+- **Окно:** 07:00–23:00 МСК, **Пн–Сб** (Сб — допсессия MOEX; Вс — выходной).
+- **Paper:** депозит 100000, комиссия 0.28%, slip 0.04%.
+- **Тикеры:** SBER, GAZP. **Сектор:** MOEXFN.
+- **Бэктест:** Sharpe 1.9–2.75 (SBER/GAZP, h=1–2). Наблюдаем.
+            """)
+        st.warning("🧪 Песочница. Бумажная торговля. Divergence SBER/GAZP vs MOEXFN.")
+
+        import subprocess as _sp_iv1
+        import sqlite3 as _sq_iv1
+        import json as _json_iv1
+        from pathlib import Path as _P_iv1
+
+        _iv1_running = _sp_iv1.run(['systemctl', 'is-active', 'finlab-index-robot-v1'], capture_output=True, text=True).stdout.strip() == 'active'
+
+        _iv1_state_file = _P_iv1('/root/finlab/robots/robot_state_index_v1.json')
+        _iv1_paused = True
+        _iv1_updated = '—'
+        if _iv1_state_file.exists():
+            try:
+                _st = _json_iv1.loads(_iv1_state_file.read_text())
+                _iv1_paused = bool(_st.get('paused', True))
+                _iv1_updated = _st.get('last_check') or '—'
+            except Exception:
+                pass
+
+        _iv1_cmd_file = _P_iv1('/root/finlab/robots/robot_command_index_v1.txt')
+
+        _c1, _c2, _c3 = st.columns(3)
+        with _c1:
+            if st.button("▶️ Старт", key="iv1_start", disabled=(_iv1_running and not _iv1_paused)):
+                try: _iv1_cmd_file.write_text("RESUME")
+                except Exception as _e: st.error(f"cmd: {_e}")
+                st.rerun()
+        with _c2:
+            if st.button("⏸️ Пауза", key="iv1_pause", disabled=(not _iv1_running or _iv1_paused)):
+                try: _iv1_cmd_file.write_text("PAUSE")
+                except Exception as _e: st.error(f"cmd: {_e}")
+                st.rerun()
+        with _c3:
+            if st.button("⏹️ Стоп", key="iv1_stop"):
+                try: _iv1_cmd_file.write_text("STOP")
+                except Exception as _e: st.error(f"cmd: {_e}")
+                st.rerun()
+
+        st.caption(f"Сервис: {'active' if _iv1_running else 'inactive'} | paused={_iv1_paused} | last_check={_iv1_updated}")
+
+        _iv1_db = _P_iv1('/root/finlab/robots/index_robot_v1.db')
+        if _iv1_db.exists():
+            _conn_iv1 = _sq_iv1.connect(str(_iv1_db))
+            try:
+                _iv1_closed = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn_iv1)
+                _iv1_open = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn_iv1)
+                _iv1_sig = pd.read_sql_query('SELECT * FROM signals ORDER BY time DESC LIMIT 20', _conn_iv1)
+            except Exception:
+                _iv1_closed = pd.DataFrame(); _iv1_open = pd.DataFrame(); _iv1_sig = pd.DataFrame()
+            _conn_iv1.close()
+
+            _iv1_pnl = float(_iv1_closed['pnl'].sum()) if len(_iv1_closed) > 0 else 0.0
+            _iv1_wr = _calc_wr(_iv1_closed) if len(_iv1_closed) > 0 else 0
+            _m1, _m2, _m3, _m4 = st.columns(4)
+            _m1.metric("PnL", f"{_iv1_pnl:+.2f} ₽")
+            _m2.metric("Сделок (закрыто)", len(_iv1_closed))
+            _m3.metric("WR", f"{_iv1_wr*100:.1f}%")
+            _m4.metric("Открыто", len(_iv1_open))
+
+            if len(_iv1_open) > 0:
+                st.markdown("**Открытые позиции**")
+                st.dataframe(_iv1_open[['ticker','direction','entry_time','entry_price','entry_z']], use_container_width=True, hide_index=True)
+            if len(_iv1_closed) > 0:
+                st.markdown("**Закрытые сделки**")
+                _show = _iv1_closed[['ticker','direction','pnl','entry_z','exit_z','entry_time','exit_time','reason']].copy() if set(['ticker','direction','pnl','entry_z','exit_z','entry_time','exit_time','reason']).issubset(_iv1_closed.columns) else _iv1_closed
+                st.dataframe(_show, use_container_width=True, hide_index=True)
+                try:
+                    render_lqdt_comparison(_iv1_closed, _iv1_pnl)
+                except Exception as _e:
+                    st.caption(f"LQDT: {_e}")
+            else:
+                st.info("Сделок пока нет")
+            if len(_iv1_sig) > 0:
+                st.markdown("**Последние сигналы**")
+                st.dataframe(_iv1_sig[['time','ticker','signal','status','reason']] if set(['time','ticker','signal','status','reason']).issubset(_iv1_sig.columns) else _iv1_sig, use_container_width=True, hide_index=True)
+        else:
+            st.info("БД index_robot_v1.db не найдена")
+
     elif robot_tab == "📈 Робот акций (TradeStats)":
         st.subheader("📈 Робот акций (TradeStats)")
         st.info("5 сигналов TradeStats | SCORE_MIN=4 | HOLD_DAYS=5 | RVI>=30 | Только LONG")

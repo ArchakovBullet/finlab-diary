@@ -95,6 +95,19 @@ def load_state():
 def save_state(st):
     with open(STATE_PATH, "w") as f: json.dump(st, f, ensure_ascii=False, indent=2)
 
+CMD_PATH = os.path.join(ROOT, "robots", "robot_command_index_v1.txt")
+
+def read_command():
+    """Читает команду из CMD_PATH (PAUSE/RESUME/STOP), удаляет файл после."""
+    if not os.path.exists(CMD_PATH): return None
+    try:
+        cmd = open(CMD_PATH).read().strip().upper()
+    except Exception:
+        return None
+    try: os.remove(CMD_PATH)
+    except Exception: pass
+    return cmd
+
 def zscore_spread(df_stock, df_sector, window=60):
     m = pd.merge(df_stock, df_sector, on="begin", how="inner").sort_values("begin").reset_index(drop=True)
     if len(m) < window + 5: return None
@@ -197,6 +210,16 @@ def main():
         log("Нет MOEXFN_D1 — выход"); return
     while True:
         st = load_state()
+        cmd = read_command()
+        if cmd == "PAUSE":
+            st["paused"] = True; save_state(st); log("CMD: PAUSE")
+        elif cmd == "RESUME":
+            st["paused"] = False; save_state(st); log("CMD: RESUME")
+        elif cmd == "STOP":
+            st["running"] = False; st["paused"] = True; save_state(st); log("CMD: STOP — выход")
+            return
+        if not st.get("running", True):
+            log("running=false — выход"); return
         if st.get("paused"):
             log("paused=true — спим"); time.sleep(CHECK_INTERVAL_S); continue
         sector = load_sector()
