@@ -55,6 +55,63 @@ def get_freshness():
     return result
 
 
+def get_index_divergence():
+    """Divergence SBER/GAZP vs MOEXFN (D1) — для AI-отчёта."""
+    import pandas as _pd, numpy as _np
+    sector_path = ROOT / 'data' / 'sector_indices' / 'MOEXFN_D1.parquet'
+    if not sector_path.exists():
+        return {}
+    try:
+        sdf = _pd.read_parquet(sector_path)
+        sdf['begin'] = _pd.to_datetime(sdf['begin'], errors='coerce').dt.normalize()
+        sdf = sdf.dropna(subset=['begin','close']).sort_values('begin').reset_index(drop=True)
+    except Exception:
+        return {}
+    out = {}
+    for t in ('SBER','GAZP'):
+        fp = ROOT / 'data' / 'candles' / f'{t}_D1.parquet'
+        if not fp.exists():
+            continue
+        try:
+            df = _pd.read_parquet(fp)
+            df['begin'] = _pd.to_datetime(df['begin'], errors='coerce').dt.normalize()
+            df = df.dropna(subset=['begin','close']).sort_values('begin').reset_index(drop=True)
+        except Exception:
+            continue
+        m = _pd.merge(df[['begin','close']], sdf[['begin','close']], on='begin', how='inner', suffixes=('_stock','_sector')).sort_values('begin').reset_index(drop=True)
+        if len(m) < 3:
+            continue
+        last = m.iloc[-1]; prev = m.iloc[-2]
+        ret_stock = float(_np.log(last['close_stock']/prev['close_stock'])) if prev['close_stock']>0 else 0.0
+        ret_sector = float(_np.log(last['close_sector']/prev['close_sector'])) if prev['close_sector']>0 else 0.0
+        divergence = (bool(_np.sign(ret_stock) != _np.sign(ret_sector))) and (abs(ret_stock)>1e-6) and (abs(ret_sector)>1e-6)
+        # z-score спреда (log_stock - beta*log_sector) на 60
+        win = 60
+        mm = m.copy()
+        mm['ls'] = _np.log(mm['close_stock'].replace(0, _np.nan))
+        mm['lc'] = _np.log(mm['close_sector'].replace(0, _np.nan))
+        mm = mm.dropna(subset=['ls','lc']).reset_index(drop=True)
+        z = None
+        if len(mm) >= win+2:
+            x = mm['lc'].values[-win:]; y = mm['ls'].values[-win:]
+            xm, ym = x.mean(), y.mean()
+            var = ((x-xm)**2).mean()
+            if var > 0:
+                beta = ((x-xm)*(y-ym)).mean()/var
+                spread = mm['ls'] - beta*mm['lc']
+                s_win = spread.iloc[-win:]
+                mu, sd = s_win.mean(), s_win.std(ddof=1)
+                if sd and sd > 0:
+                    z = float((spread.iloc[-1]-mu)/sd)
+        signal = None
+        if divergence:
+            signal = 'LONG' if ret_sector > 0 else 'SHORT'
+        out[t] = {'ret_stock': round(ret_stock,6), 'ret_sector': round(ret_sector,6),
+                  'divergence': divergence, 'z': (round(z,3) if z is not None else None),
+                  'signal': signal, 'date': str(last['begin'].date())}
+    return out
+
+
 def get_config():
     """Enabled-пары из pairs_config.json."""
     if not CONFIG.exists():
@@ -491,6 +548,7 @@ def main():
         'generated_at': now.strftime('%Y-%m-%d %H:%M:%S'),
         'legend': get_legend(),
         'freshness': get_freshness(),
+        'index_divergence': get_index_divergence(),
         'config': get_config(),
         'config_v2': get_config_v2(),
         'quarantine': get_quarantine(),
