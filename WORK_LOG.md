@@ -2835,3 +2835,21 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-27 (вечер-2) — walk-forward MOEXFN divergence (SBER/GAZP/LKOH)
+
+### Скрипт
+- `scripts/moexfn_divergence_test.py` (read-only): divergence акция vs MOEXFN → forward return 1/2/4/8 дней, walk-forward (train=6мес, test=1мес, шаг=1мес), baseline без divergence.
+- CSV: `logs/moexfn_divergence_*.csv`.
+
+### Результат
+- (см. вывод прогона: baseline vs divergence, mean_fwd, mean_aligned, wr_aligned, sharpe_aligned по тикерам/горизонтам).
+- **Критерий «работает»:** mean_aligned > 0, wr_aligned > 0.5, sharpe_aligned > 0 стабильно по фолдам на всех трёх активах.
+
+### Решение
+- (по результату: если работает — кандидат в v4 (тест, с согласия); если нет — фиксируем).
+
+### Git
+- (после commit)
