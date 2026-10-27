@@ -341,3 +341,14 @@ ho pprox 1\), combined не работает).
 - **Зачем:** LKOH-HYDR_H1 висела enabled=true, но была акция+акция → мусор в signals/AI-отчёте, циклы впустую.
 - **Как:** скрипт `scripts/audit_pairs_class.py` (по `tickers_config.json` + `pairs_config*.json`), вывод в `logs/pairs_audit_*.csv`. Или ручная проверка при добавлении.
 - **Ссылки:** WORK_LOG 26.10 (вечер-3), `tickers_config.json` (stocks/futures).
+
+### 29. Algopack-фон в AI-отчёт (по активам + по парам)
+- **Статус:** `pending` (27.10.2026 — после обсуждения AI-исследования Algopack).
+- **Что:** в AI-daily/weekly добавить блок «Algopack-фон»:
+  - **По активам** (например, SBER/SBERF): FutOI (физ/юр лонги/шорты), MegaAlerts (крупные сделки), HI2 (концентрация HHI), TradeStats (объёмы/волатильность), секторный индекс (MOEXFN и др.), RVI.
+  - **По парам** (v2/v3/v4): FutOI/MegaAlerts/HI2/TradeStats по **ногам** пары (divergence между ногами, extremes, концентрация) — **контекст для AI**, не автоматика.
+- **Принцип (из п.12):** AI даёт **рекомендации/гипотезы** (не автоматическое добавление), **walk-forward обязателен**.
+- **Промпт-шаблон:** «На основе Algopack-фона — есть ли divergence (цена vs FutOI/HI2), extremes (MegaAlerts), концентрация (HI2)? Предложи гипотезы для v4/исследования (не внедрять без walk-forward).»
+- **Где:** `scripts/ai_data_context.py` (сбор контекста) + `ai_daily_report.py` / `ai_weekly_report.py` (вывод + промпт).
+- **v2 — не трогаем** (только AI-отчёт, чтение). **v4** — если гипотеза подтвердится (walk-forward), тест (с согласия).
+- **Ссылки:** IDEAS п.12 (AI-оценка discovery), WORK_LOG 27.10 (AI-исследование Algopack, пилот SBER).
