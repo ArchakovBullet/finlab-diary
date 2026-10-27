@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ai_daily_report.py — ежедневный отчёт через VseGPT + email.
-from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4
+from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4, get_index_divergence
 
 
 Читает robot.log за 24ч, robot_state.json, pairs_robot.db.
@@ -263,6 +263,20 @@ def main():
     data = r.json()
     answer = data['choices'][0]['message']['content']
 
+    # === Блок: Робот индексный_v1 (divergence SBER/GAZP vs MOEXFN) ===
+    try:
+        _idx = get_index_divergence()
+        if _idx:
+            _lines = ["\n---\n\n## 📈 Робот индексный_v1 — divergence SBER/GAZP vs MOEXFN (D1)\n",
+                      "| Тикер | ret_stock | ret_sector | divergence | z | signal | date |",
+                      "|---|---|---|---|---|---|---|"]
+            for _t, _d in _idx.items():
+                _lines.append(f"| {_t} | {_d.get('ret_stock')} | {_d.get('ret_sector')} | {_d.get('divergence')} | {_d.get('z')} | {_d.get('signal')} | {_d.get('date')} |")
+            _lines.append("\n**Промпт для AI:** На основе divergence SBER/GAZP vs MOEXFN — есть ли сигнал (LONG/SHORT при divergence)? Предложи гипотезы (не внедрять без walk-forward).")
+            answer = answer + "\n".join(_lines)
+    except Exception as _e:
+        answer = answer + f"\n[divergence block error: {_e}]\n"
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime('%Y%m%d')
     out_path = OUT_DIR / f'{ts}.md'
@@ -273,19 +287,6 @@ def main():
     if not args.no_email and email_from and email_pass:
         subject = f'FinLab Daily Report {ts}'
         try:
-    # === Блок: Робот индексный_v1 (divergence SBER/GAZP vs MOEXFN) ===
-    try:
-        _idx = (ctx or {}).get('index_divergence') or {}
-        if _idx:
-            _lines = ["\n---\n\n## 📈 Робот индексный_v1 — divergence SBER/GAZP vs MOEXFN (D1)\n"]
-            _lines.append("| Тикер | ret_stock | ret_sector | divergence | z | signal | date |")
-            _lines.append("|---|---|---|---|---|---|---|")
-            for _t, _d in _idx.items():
-                _lines.append(f"| {_t} | {_d.get('ret_stock')} | {_d.get('ret_sector')} | {_d.get('divergence')} | {_d.get('z')} | {_d.get('signal')} | {_d.get('date')} |")
-            _lines.append("\n**Промпт для AI:** На основе divergence SBER/GAZP vs MOEXFN — есть ли сигнал (LONG/SHORT при divergence)? Предложи гипотезы (не внедрять без walk-forward).")
-            report_body = (report_body or '') + "\n".join(_lines)
-    except Exception as _e:
-        report_body = (report_body or '') + f"\n[divergence block error: {_e}]\n"
             send_email(subject, answer, email_from, email_pass, email_to)
             print(f'✅ Email отправлен на {email_to}')
         except Exception as e:
