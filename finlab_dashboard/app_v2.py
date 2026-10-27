@@ -4205,7 +4205,7 @@ elif page == "📊 Торговые роботы":
     # Подвкладки (radio — вверху)
     robot_tab = st.radio(
         "Выберите робота",
-        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📊 Парная торговля_v4 (test)", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)"],
+        ["📊 Обзор", "📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📊 Парная торговля_v4 (test)", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)", "📈 Робот индексный_v1 (test)"],
         horizontal=True
     )
     import sqlite3 as _sqlite3
@@ -4297,6 +4297,23 @@ elif page == "📊 Торговые роботы":
                 'wr': _pairs_v4_wr,
                 'db': _pairs_v4_db,
                 'is_pairs': True,
+            }
+
+        # Робот индексный_v1 (divergence SBER/GAZP vs MOEXFN)
+        _index_v1_db = Path('/root/finlab/robots/index_robot_v1.db')
+        if _index_v1_db.exists():
+            _conn = _sqlite3.connect(_index_v1_db)
+            try:
+                _closed_index_v1 = pd.read_sql_query('SELECT * FROM positions WHERE status="CLOSED"', _conn)
+                _open_index_v1 = pd.read_sql_query('SELECT * FROM positions WHERE status="OPEN"', _conn)
+            except Exception:
+                _closed_index_v1 = pd.DataFrame(); _open_index_v1 = pd.DataFrame()
+            _conn.close()
+            _index_v1_pnl = float(_closed_index_v1['pnl'].sum()) if len(_closed_index_v1) > 0 else 0.0
+            _index_v1_wr = _calc_wr(_closed_index_v1) if len(_closed_index_v1) > 0 else 0
+            _robots_stats['📈 Робот индексный_v1 (test)'] = {
+                'open': len(_open_index_v1), 'pnl': _index_v1_pnl, 'wr': _index_v1_wr,
+                'db': _index_v1_db, 'is_pairs': False,
             }
 
         # Algopack-робот (заменяет старый «Робот фьючерсов»)
