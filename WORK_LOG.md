@@ -2918,3 +2918,29 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-27 (вечер-5) — AI-отчёт: блок divergence SBER/GAZP vs MOEXFN (daily + weekly)
+
+### Что сделано
+
+- **`ai_data_context.py`:** функция `get_index_divergence()` — для SBER/GAZP: `ret_stock`, `ret_sector` (MOEXFN), `divergence`, `z`, `signal`. **В контексте:** `'index_divergence': get_index_divergence()`.
+- **`ai_daily_report.py`:** импорт `get_index_divergence` (вне docstring — fix-2), блок «📈 Робот индексный_v1 — divergence SBER/GAZP vs MOEXFN» **после** `answer` (таблица + промпт).
+- **`ai_weekly_report.py`:** импорт `get_index_divergence`, блок **после** `answer` (таблица + промпт).
+- **Проверка:** `py_compile OK` (daily + weekly); **dry-run** (`--no-email`) — блок divergence **есть** (daily: SBER/GAZP; weekly: SBER/GAZP). **Commit + push** (daily: `d5f6a76`, weekly: `c1a6d23`).
+
+### Результат (dry-run)
+
+- **Daily:** SBER (divergence=False, z=1.032), GAZP (divergence=True, signal=LONG, z=1.012).
+- **Weekly:** то же (SBER/GAZP, divergence, z, signal) + промпт для AI.
+
+### Следующее
+
+- **Блок 4:** наблюдение 1–2 недели (v4: exit_z=0.3/max_z=3.5; index_robot_v1: divergence SBER/GAZP; AI-отчёт: divergence). **Пассивно.**
+- **Рекомендации weekly** (AI, **без** нашего контекста) — **не действуем** вслепую: MAX_HOLD — `done` (не работает), exit_z=0.3/max_z=3.5 — **в v4** (тест), LKOH-HYDR — disabled, freshness DEAD_TICKERS — `done`. **Сверять** с нашими шагами.
+- **v2/v3/v4 — не трогаем** (код). **v4-фильтр (B) — позже** (если index_robot_v1 покажет).
+
+### Git
+
+- (после commit)
