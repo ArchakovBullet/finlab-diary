@@ -97,3 +97,4 @@ logs/
 __pycache__/
 *.pyc
 robots/tf_fresh_state_*.json
+robots/robot_state_index_v1.json
