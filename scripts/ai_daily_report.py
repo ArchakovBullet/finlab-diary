@@ -8,6 +8,7 @@ from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signa
 """
 import argparse
 import json
+from ai_data_context import get_index_divergence
 import os
 import smtplib
 import sqlite3
