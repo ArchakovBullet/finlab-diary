@@ -12,6 +12,7 @@
 Read-only по данным. v2/v3/v4 не трогает.
 """
 import os, json, time, sqlite3
+import requests
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -31,6 +32,8 @@ DEPOSIT = 100_000.0
 FEE = 0.0028
 SLIP = 0.0004
 CHECK_INTERVAL_S = 3600
+VK_TOKEN = os.getenv('VK_TOKEN', '')
+VK_GROUP_ID = os.getenv('VK_GROUP_ID', '497763452')
 TRADE_START = "07:00"
 TRADE_END = "23:00"
 NO_TRADE_WEEKENDS = []  # список (месяц, день) — праздники/выходные (Сб НЕ включать — торговый)
@@ -39,6 +42,26 @@ def log(msg):
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
     with open(LOG_PATH, "a") as f:
         f.write(line + "\n")
+
+def send_vk_message(message):
+    """Отправить сообщение в VK (index_v1)."""
+    if not VK_TOKEN:
+        log("❌ VK_TOKEN не настроен")
+        return False
+    try:
+        url = 'https://api.vk.com/method/messages.send'
+        params = {
+            'access_token': VK_TOKEN,
+            'peer_id': VK_GROUP_ID,
+            'message': "[index_v1] " + message,
+            'random_id': 0,
+            'v': '5.131',
+        }
+        r = requests.post(url, params=params, timeout=10)
+        return r.status_code == 200
+    except Exception as e:
+        log(f"❌ VK error: {e}")
+        return False
 
 def is_moex_trading_day(now):
     # MOEX: Пн–Сб — торговые (Сб — допсессия), Вс — выходной
@@ -138,6 +161,7 @@ def open_position(ticker, direction, price, sector_price, z):
                    VALUES (?,?,?,?,?,?,?, 'OPEN')""",
                 (ticker, direction, 1.0, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), float(price), float(sector_price), float(z)))
     conn.commit(); conn.close()
+    send_vk_message(f"OPEN {ticker} {direction} price={price} z={z:+.2f}")
 
 def close_position(pid, price, sector_price, z, reason):
     conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
@@ -152,6 +176,7 @@ def close_position(pid, price, sector_price, z, reason):
                    WHERE id=?""",
                 (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), float(price), float(sector_price), float(z), float(net), reason, pid))
     conn.commit(); conn.close()
+    send_vk_message(f"CLOSE {ticker} {direction} pnl={net:+.2f} reason={reason} z={z:+.2f}")
 
 def log_signal(ticker, ret_stock, ret_sector, z, signal, status, reason):
     conn = sqlite3.connect(DB_PATH); cur = conn.cursor()
