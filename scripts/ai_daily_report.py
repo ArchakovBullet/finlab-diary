@@ -197,6 +197,19 @@ def main():
 {log_text}
 """
 
+    # === Divergence SBER/GAZP vs MOEXFN (в user_content — AI видит и анализирует) ===
+    try:
+        _idx = get_index_divergence()
+        if _idx:
+            _lines = ["\n\n=== DIVERGENCE SBER/GAZP vs MOEXFN (D1) ===",
+                      "Проанализируй: есть ли сигнал (LONG/SHORT при divergence)? Предложи гипотезы (не внедрять без walk-forward).",
+                      "| Тикер | ret_stock | ret_sector | divergence | z | signal | date |",
+                      "|---|---|---|---|---|---|---|"]
+            for _t, _d in _idx.items():
+                _lines.append(f"| {_t} | {_d.get('ret_stock')} | {_d.get('ret_sector')} | {_d.get('divergence')} | {_d.get('z')} | {_d.get('signal')} | {_d.get('date')} |")
+            user_content = user_content + "\n".join(_lines)
+    except Exception as _e:
+        user_content = user_content + f"\n[divergence block error: {_e}]\n"
     system_prompt = """Ты — аналитик FinLab. Составь ЕЖЕДНЕВНЫЙ отчёт.
 
 ВАЖНО: Раздел "ДАННЫЕ (РЕАЛЬНЫЕ)" — ЭТО ИСТОЧНИК ИСТИНЫ. Он содержит:
