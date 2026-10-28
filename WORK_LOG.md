@@ -2981,3 +2981,26 @@
 ### Git
 
 - `pairs_config_test.json` (combined_betas, cron 19:00) — закоммичен (как вчера, ожидаемо).
+
+---
+
+## 2026-10-28 (вечер-2) — AI-отчёт: divergence в user_content (AI анализирует)
+
+### Что сделано
+
+- **`ai_daily_report.py`:** divergence **в `user_content`** (до `call_vsegpt`) — AI видит и анализирует. Убран дубль импорта (строка 11). Бэкап: `ai_daily_report.py.bak_20261028_204313`.
+- **`ai_weekly_report.py`:** divergence **в `user_content`** (до `call_vsegpt`). Бэкап: `ai_weekly_report.py.bak_20261028_204313`.
+- **Проверка:** `py_compile OK`; **dry-run daily** (`--no-email`) — AI **анализирует** divergence:
+  - «Index divergence SBER/GAZP: divergence=False у обоих (z 1.20 и 1.12) — сигнала нет, всё в норме.»
+  - «Гипотеза для разведки (не внедрять): при divergence=True на D1 + |z|>1.5 тестировать mean-reversion вход по SBER/GAZP против сектора — обязателен walk-forward 5 фолдов.»
+- **Commit `808c3b0`**, push в origin + diary.
+
+### Следующее
+
+- **Блок 4:** наблюдение 1–2 недели (v4: exit_z=0.3/max_z=3.5; index_robot_v1: divergence SBER/GAZP; AI-отчёт: divergence). **Пассивно.**
+- **Через 1–2 недели** — сравнение с бэктестом (Sharpe 1.9–2.75), решение по v4/index_robot_v1.
+- **v2/v3/v4 — не трогаем** (код). **v2** — fix (перечитывание pairs_config — сделано).
+
+### Git
+
+- (после commit)
