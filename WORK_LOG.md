@@ -3057,3 +3057,27 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-28 (вечер-4) — ВК-уведомления в index_v1 + EnvironmentFile в юниты
+
+### Что сделано
+
+- **`robots/index_robot_v1.py`:** добавлены `VK_TOKEN`, `VK_GROUP_ID`, `send_vk_message()` (по образцу v2, префикс `[index_v1]`); вызовы в `open_position`/`close_position`. Бэкап: `index_robot_v1.py.bak_20261028_210643`. `py_compile OK`.
+- **Systemd юниты:** `EnvironmentFile=/root/finlab/.env` добавлен в **`finlab-robot-v2.service`** и **`finlab-index-robot-v1.service`** (v2 — дублирует `dotenv`, но не мешает).
+- **Проверка:** v2 `active`, index_v1 `active`; **тест ВК** — `True` (ВК работает).
+- **Позиция GAZP** (OPEN, 28.10 07:46) — **не трогаем** (закроется завтра по h=1; ВК — при закрытии).
+
+### Замечание
+
+- **`.env`:** при `source .env` строка `sk-or-vis-...` интерпретируется как команда (`command not found`) — вероятно, `OPENROUTER_API_KEY=sk-or-vis-...` без кавычек. **Почистить позже** (не критично для ВК).
+
+### Следующее
+
+- **P0** — наблюдение 1–2 недели (v4, index_robot_v1, AI-отчёт). **Пассивно.**
+- **v2/v3/v4 — не трогаем** (код).
+
+### Git
+
+- (после commit)
