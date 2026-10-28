@@ -1041,6 +1041,12 @@ def main():
             current_time = time.time()
 
             # Проверяем сигналы по ТФ
+            # Перечитываем конфиг пар (чтобы изменения enabled/params применялись без рестарта)
+            try:
+                with open(CONFIG_PATH, 'r') as _f_cfg:
+                    pairs_config = json.load(_f_cfg)
+            except Exception as _e_cfg:
+                print(f'  ⚠️ Не удалось перечитать pairs_config: {_e_cfg}')
             for tf, interval in CHECK_INTERVALS.items():
                 if current_time - last_check[tf] >= interval:
                     check_signals_by_tf(pairs_config, tf)
