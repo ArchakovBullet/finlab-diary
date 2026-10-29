@@ -6216,8 +6216,24 @@ elif page == "📊 Торговые роботы":
             _m1, _m2, _m3, _m4 = st.columns(4)
             _m1.metric("PnL", f"{_iv1_pnl:+.2f} ₽")
             _m2.metric("Сделок (закрыто)", len(_iv1_closed))
-            _m3.metric("WR", f"{_iv1_wr*100:.1f}%")
+            _m3.metric("WR", f"{_iv1_wr:.1f}%")
             _m4.metric("Открыто", len(_iv1_open))
+
+            # 📈 График PnL по дням (cumsum)
+            try:
+                _iv1_cl = _iv1_closed.copy()
+                if len(_iv1_cl) > 0 and 'exit_time' in _iv1_cl.columns and 'pnl' in _iv1_cl.columns:
+                    _iv1_cl['_d'] = pd.to_datetime(_iv1_cl['exit_time'], errors='coerce').dt.normalize()
+                    _daily = _iv1_cl.dropna(subset=['_d']).groupby('_d')['pnl'].sum().sort_index()
+                    _cum = _daily.cumsum()
+                    if len(_cum) > 0:
+                        import plotly.graph_objects as _go
+                        _fig = _go.Figure()
+                        _fig.add_trace(_go.Scatter(x=_cum.index, y=_cum.values, mode='lines+markers', name='Cumulative PnL'))
+                        _fig.update_layout(title='📈 График PnL по дням (cumsum)', xaxis_title='Дата', yaxis_title='PnL (₽)', height=350, template='plotly_dark')
+                        st.plotly_chart(_fig, use_container_width=True)
+            except Exception as _e:
+                st.caption(f"PnL chart: {_e}")
 
             if len(_iv1_open) > 0:
                 st.markdown("**Открытые позиции**")
