@@ -210,6 +210,43 @@ def main():
             user_content = user_content + "\n".join(_lines)
     except Exception as _e:
         user_content = user_content + f"\n[divergence block error: {_e}]\n"
+    # === Контекст: enabled-пары + что уже сделано (чтобы AI не советовал сделанное) ===
+    try:
+        _cfg_v2 = json.load(open("/root/finlab/FinLabPy/My_Indicators/pairs_config_v2.json"))
+        _cfg_v4 = json.load(open("/root/finlab/FinLabPy/My_Indicators/pairs_config_test.json"))
+        _en2 = [p for p,c in _cfg_v2.get("pairs",{}).items() if c.get("enabled")]
+        _dis2 = [p for p,c in _cfg_v2.get("pairs",{}).items() if not c.get("enabled")]
+        _en4 = [p for p,c in _cfg_v4.get("pairs",{}).items() if c.get("enabled")]
+        _dis4 = [p for p,c in _cfg_v4.get("pairs",{}).items() if not c.get("enabled")]
+        _ctx_lines = ["\n\n=== КОНТЕКСТ: enabled-пары + что уже сделано (НЕ советуй уже сделанное) ===",
+                      f"v2 enabled: {_en2}",
+                      f"v2 disabled: {_dis2}",
+                      f"v4 enabled: {_en4}",
+                      f"v4 disabled: {_dis4}",
+                      "Уже сделано (НЕ предлагать как новое):",
+                      "- MAX_HOLD для M10 — проверен, НЕ работает (Sharpe хуже). Закрыто.",
+                      "- freshness DEAD_TICKERS — сделано (oldest 433 → 6ч). Закрыто.",
+                      "- exit_z=0.3 / max_z=3.5 — внедрены в v4 (тест, наблюдение 1–2 недели).",
+                      "- LKOH-HYDR_H1 — disabled (акция+акция). SFIN-SH_M10 — disabled (карантин corr<0.5).",
+                      "- index_robot_v1 — запущен (divergence SBER/GAZP); сделки: см. позиции.",
+                      "Если рекомендуешь что-то из этого — пометь как 'уже сделано', не как новое."]
+        # индекс-сделки
+        try:
+            import sqlite3 as _sq
+            _c = _sq.connect("/root/finlab/robots/index_robot_v1.db")
+            _cl = _sq.connect("/root/finlab/robots/index_robot_v1.db")
+            _cur = _c.cursor()
+            _cur.execute("select count(*), coalesce(sum(pnl),0) from positions where status='CLOSED'")
+            _n, _pnl = _cur.fetchone()
+            _cur.execute("select count(*) from positions where status='OPEN'")
+            _op = _cur.fetchone()[0]
+            _ctx_lines.append(f"index_v1: закрыто={_n}, PnL={_pnl:+.2f}₽, открыто={_op}")
+            _c.close()
+        except Exception:
+            pass
+        user_content = user_content + "\n".join(_ctx_lines)
+    except Exception as _e:
+        user_content = user_content + f"\n[context block error: {_e}]\n"
     system_prompt = """Ты — аналитик FinLab. Составь ЕЖЕДНЕВНЫЙ отчёт.
 
 ВАЖНО: Раздел "ДАННЫЕ (РЕАЛЬНЫЕ)" — ЭТО ИСТОЧНИК ИСТИНЫ. Он содержит:
