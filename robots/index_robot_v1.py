@@ -202,7 +202,10 @@ def check_ticker(ticker, df_stock, df_sector):
     for p in open_pos:
         pid, tk, direction, vol, etime, eprice, ez = p
         _etime = pd.to_datetime(etime, errors="coerce")
-        _held_days = (last["begin"] - _etime).days if pd.notna(_etime) else 0
+        if pd.notna(_etime):
+            _held_days = (pd.to_datetime(last["begin"]).normalize() - _etime.normalize()).days
+        else:
+            _held_days = 0
         if _held_days >= H_DAYS:
             close_position(pid, float(last["close"]), float(last["sector"]), z, f"exit_H({_held_days}d)")
             log(f"  CLOSE {tk} {direction} id={pid} reason=H_DAYS ({_held_days}d) z={z:+.2f}")
