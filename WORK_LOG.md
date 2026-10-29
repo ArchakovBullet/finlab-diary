@@ -3123,3 +3123,41 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-30 — Bybit API: подключение, доступ к активам, сборщик H4 (M10 — нет в Bybit)
+
+### Bybit API — подключение
+
+- **API-ключ** создан на **Mainnet** (bybit.com), **Read-Write**, **IP whitelist**: `159.194.219.117`, **Withdrawal — OFF**.
+- **`.env`:** `BYBIT_API_KEY`, `BYBIT_API_SECRET`, `BYBIT_TESTNET=false`.
+- **Проверка (read):** `server time 200 OK`, `wallet 200 OK`, `✅ API работает (read)`. Баланс — **0** (денег нет — норма, public API работает без баланса).
+
+### Доступ к активам (проверено)
+
+- **921 linear instruments** (perpetuals).
+- **BTCUSDT, ETHUSDT, SOLUSDT, XRPUSDT, DOGEUSDT** — `status=Trading`, `contractType=LinearPerpetual` (minQty: BTC 0.001, ETH 0.01, SOL 0.1, XRP 0.1, DOGE 1).
+- **Kline H4** — работает (5 свечей, last ~78858).
+- **Tickers** — `BTCUSDT=78859.30`, `ETHUSDT=2257.15`, `SOLUSDT=96.190` (volume24h — высокая ликвидность).
+
+### Сборщик данных (`scripts/bybit_collector.py`, read-only)
+
+- **H4** (`interval=240`): **BTCUSDT, ETHUSDT, SOLUSDT** — **10 000 строк каждый** → `data/bybit/{symbol}_H4.parquet` (last: 2026-10-29 20:00).
+- **M10** (`interval=10`): **пусто** (0 строк). **Причина:** Bybit REST Kline **не поддерживает** `interval=10` (M10). Поддерживаются: `1,3,5,15,30,60,120,240,360,720,D,W,M`. **M10 — нет**.
+- **Commit `232b814`** (скрипт).
+
+### Решение по M10
+
+- **M10 не делаем** (Bybit не поддерживает). **H4 — достаточно** для walk-forward пар (BTC/ETH, BTC/SOL).
+- **M5/M15** — возможны (если нужен внутридневной TF) — **позже** (если понадобится).
+
+### Следующее
+
+- **Walk-forward H4** (BTC/ETH, BTC/SOL) — коинтеграция, спред, entry_z (как `sokolov_*_test.py`). **Следующий шаг.**
+- **index_v1 (адаптация под крипту)** — позже (24/7, шорт, другие комиссии).
+- **v2/v3/v4 (MOEX)** — не трогаем (код). **P0 — наблюдение** (1–2 недели).
+
+### Git
+
+- (после commit)
