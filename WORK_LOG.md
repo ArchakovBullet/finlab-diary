@@ -3100,3 +3100,26 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-29 (вечер-2) — P2: AI-отчёт контекст; fix графика PnL в Обзоре; WR index_v1
+
+### Что сделано
+
+- **P2 — AI-отчёт (daily + weekly):** в `user_content` — **контекст** ( `enabled`/`disabled` v2/v4 + **«что сделано»** (MAX_HOLD — done, freshness — done, exit_z/max_z — в v4, LKOH-HYDR/SFIN-SH — disabled ) + **index_v1 сделки** (закрыто/PnL/открыто) ). **AI** — **не советует** **уже** **сделанное**. `commit 87cea5a`.
+- **WR index_v1 (dashboard):** убрано `*100` ( `_calc_wr` **уже** **проценты** ) — **WR** 100.0% (не 10000%). `commit e5872b3`.
+- **График PnL в Обзоре:** **сбор** `_all_closed_dfs` — **из** **всех** **БД** (`positions` / `algopack_positions` — **v1/v2/v3/v4/index_v1** + stocks/futures ). **Общий WR** — **тоже** (не только algopack). `commit 9f996a2`.
+
+### Проверка
+
+- `py_compile OK` (dashboard); дашборд `active`; AI dry-run — **AI** **видит** **контекст** (index_v1: +2.44₽, карантины — **корректно**). **График** **в** **Обзоре** — **должен** **быть** (данные v2/index_v1 есть).
+
+### Следующее
+
+- **P0** — наблюдение 1–2 недели (v4, index_robot_v1, AI-отчёт). **Пассивно.**
+- **v2/v3/v4 — не трогаем** (код).
+
+### Git
+
+- (после commit)
