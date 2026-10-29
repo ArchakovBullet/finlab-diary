@@ -4412,12 +4412,23 @@ elif page == "📊 Торговые роботы":
             _all_trades = 0
             _all_wins = 0
             for s in _robots_stats.values():
-                _conn = _sqlite3.connect(s['db'])
-                if 'tradestats_stocks_robot' in str(s['db']) or 'futures_algopack' in str(s['db']):
-                    _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
-                    _all_trades += len(_df)
-                    _all_wins += len(_df[_df['pnl'] > 0])
-                _conn.close()
+                try:
+                    _conn = _sqlite3.connect(s['db'])
+                    _tbl = None
+                    try:
+                        _cur = _conn.cursor()
+                        _cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('positions','algopack_positions')")
+                        _rows = _cur.fetchall()
+                        _tbl = _rows[0][0] if _rows else None
+                    except Exception:
+                        _tbl = None
+                    if _tbl:
+                        _df = pd.read_sql_query(f'SELECT * FROM {_tbl} WHERE status="CLOSED"', _conn)
+                        _all_trades += len(_df)
+                        _all_wins += len(_df[_df['pnl'] > 0]) if len(_df) > 0 else 0
+                    _conn.close()
+                except Exception:
+                    pass
             _total_wr = _all_wins / _all_trades * 100 if _all_trades > 0 else 0
             st.metric("Общий Win Rate", f"{_total_wr:.1f}%")
         with col_a3:
@@ -4425,15 +4436,29 @@ elif page == "📊 Торговые роботы":
         with col_a4:
             st.metric("Активных роботов", _active_robots)
 
-        # График PnL
+        # График PnL (из всех БД: positions / algopack_positions)
         _all_closed_dfs = []
         for s in _robots_stats.values():
-            _conn = _sqlite3.connect(s['db'])
-            if 'tradestats_stocks_robot' in str(s['db']) or 'futures_algopack' in str(s['db']):
-                _df = pd.read_sql_query('SELECT * FROM algopack_positions WHERE status="CLOSED"', _conn)
-                _df['exit_time'] = pd.to_datetime(_df['exit_time'])
-                _all_closed_dfs.append(_df[['exit_time', 'pnl']])
-            _conn.close()
+            try:
+                _conn = _sqlite3.connect(s['db'])
+                _tbl = None
+                try:
+                    _cur = _conn.cursor()
+                    _cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('positions','algopack_positions')")
+                    _rows = _cur.fetchall()
+                    _tbl = _rows[0][0] if _rows else None
+                except Exception:
+                    _tbl = None
+                if _tbl:
+                    _df = pd.read_sql_query(f'SELECT * FROM {_tbl} WHERE status="CLOSED"', _conn)
+                    if 'exit_time' in _df.columns and 'pnl' in _df.columns and len(_df) > 0:
+                        _df['exit_time'] = pd.to_datetime(_df['exit_time'], errors='coerce')
+                        _df = _df.dropna(subset=['exit_time'])
+                        if len(_df) > 0:
+                            _all_closed_dfs.append(_df[['exit_time','pnl']])
+                _conn.close()
+            except Exception as _e:
+                pass
 
         if _all_closed_dfs:
             _all_closed = pd.concat(_all_closed_dfs, ignore_index=True)
