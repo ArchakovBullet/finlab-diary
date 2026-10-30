@@ -5106,10 +5106,10 @@ elif page == "📊 Торговые роботы":
         from pathlib import Path as _P_v2
 
         # Статус сервиса
-        _v3_running = _sp_v2.run(['systemctl', 'is-active', 'finlab-robot-v2'], capture_output=True, text=True).stdout.strip() == 'active'
+        _v3_running = _sp_v2.run(['systemctl', 'is-active', 'finlab-robot-v3'], capture_output=True, text=True).stdout.strip() == 'active'
 
         # State
-        _v3_state_file = _P_v2('/root/finlab/robots/robot_state_v2.json')
+        _v3_state_file = _P_v2('/root/finlab/robots/robot_state_v3.json')
         _v3_paused = True
         _v3_updated = '—'
         if _v3_state_file.exists():
@@ -5129,12 +5129,12 @@ elif page == "📊 Торговые роботы":
             st.error(f"🔴 Робот не запущен (systemd: inactive)")
 
         # Конфиг v2
-        _v3_cfg_path = _P_v2('/root/finlab/FinLabPy/My_Indicators/pairs_config_v2.json')
+        _v3_cfg_path = _P_v2('/root/finlab/FinLabPy/My_Indicators/pairs_config_v3.json')
         if _v3_cfg_path.exists():
             try:
                 _v3_cfg = _json_v2.loads(_v3_cfg_path.read_text())
                 _v3_enabled = [k for k, p in _v3_cfg.get('pairs', {}).items() if p.get('enabled')]
-                st.caption(f"Config v2: {len(_v3_enabled)} enabled-пар | last_updated: {_v3_cfg.get('last_updated', '—')}")
+                st.caption(f"Config v3: {len(_v3_enabled)} enabled-пар | last_updated: {_v3_cfg.get('last_updated', '—')}")
             except Exception:
                 st.caption("Config v2: не удалось прочитать")
 
@@ -5163,7 +5163,7 @@ elif page == "📊 Торговые роботы":
         </style>
         ''', unsafe_allow_html=True)
 
-        _v3_cmd_file = _P_v2('/root/finlab/robots/robot_command_v2.txt')
+        _v3_cmd_file = _P_v2('/root/finlab/robots/robot_command_v3.txt')
         _v3_open_count = 0
         if _v3_db.exists():
             try:

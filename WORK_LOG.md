@@ -3180,3 +3180,36 @@
 ### Git
 
 - (после commit)
+
+---
+
+## 2026-10-30 (вечер-2) — index_v1: шум/цикл, ручное закрытие, MIN_ENTRY_Z; v3-вкладка: путь + 3 поля
+
+### index_v1 — инцидент
+
+- **Симптом:** шумовые позиции при |z|<0.5 (SBER z=-0.18, GAZP z=+0.30), закрытие в тот же/следующий цикл по `exit_z` (D1 не обновляется -> entry_z==exit_z). PnL — только комиссии.
+- **Ручное закрытие:** id=4,5 (20:10, -0.94, -0.37), id=6,7 (21:10, manual_close_bad_entry, -0.94, -0.37). total_pnl=-0.176.
+- **Фикс index_robot_v1.py** (бэкап index_robot_v1.py.bak_20261030_2120, py_compile OK): MIN_ENTRY_Z=1.0 (временно, до WF); вход `abs(z)>=MIN_ENTRY_Z`; выход `_held_days>=1 and abs(z)<=EXIT_Z`; лог старта min_entry_z.
+- **Робот inactive, paused=true** — не рестартили. **WF pending:** scripts/index_divergence_wf.py (min_entry_z 0.5/1.0/1.5/2.0, exit_z 0.5/0.3, 5 фолдов, merged 337д).
+- **PAUSE-инцидент:** команда записана в корень (не тот путь), робот читает robots/robot_command_index_v1.txt. CMD_PATH корректен, мусорный корневой удалён.
+
+### v3-вкладка дашборда — путь + 3 поля
+
+- **Баг 1 (путь):** app_v2.py:5166 -> robot_command_v2.txt, исправлено на robot_command_v3.txt (бэкап app_v2.py.bak_20261030_2145).
+- **Баг 2 (копипаст v2):** app_v2.py:5109/5112/5132 — v3 читал is-active v2, robot_state_v2.json, pairs_config_v2.json. Исправлено (бэкап app_v2.py.bak_20261030_2210, py_compile OK): _v3_running->finlab-robot-v3; _v3_state_file->robot_state_v3.json; _v3_cfg_path->pairs_config_v3.json; откат _v2_running (был сломан первым фиксом) -> finlab-robot-v2.
+- **Проверка:** v2 paused=false, v3 paused=true; UI v3 «на паузе», v2 «работает». Дашборд active.
+- **Урок:** правки дашборда — только по уникальным якорям (_v3_*, _v2_*), не по общим шаблонам.
+
+### Техдолг (WORK_LOG, не IDEAS)
+
+- finlab-robot (pairs, DEAD) — is-enabled=enabled, active. По правилу 9 должен быть masked. Отдельная задача.
+- v3-вкладка: «Config v2:» в подписи -> «Config v3:» (косметика).
+
+### Git
+
+- (после commit)
+
+### Fix (30.10, вечер-3) — «Config v2:» -> «Config v3:» на v3-вкладке
+
+- Косметика: подпись на v3-вкладке показывала «Config v2:» (копипаст). Исправлено на «Config v3:» (бэкап app_v2.py.bak_20261030_2230, py_compile OK, дашборд active).
+- Техдолг закрыт.
