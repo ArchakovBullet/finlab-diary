@@ -28,6 +28,7 @@ TICKERS = ["SBER", "GAZP"]
 SECTOR_FILE = os.path.join(SECTOR, "MOEXFN_D1.parquet")
 H_DAYS = 1
 EXIT_Z = 0.5
+MIN_ENTRY_Z = 1.0
 DEPOSIT = 100_000.0
 FEE = 0.0028
 SLIP = 0.0004
@@ -209,11 +210,11 @@ def check_ticker(ticker, df_stock, df_sector):
         if _held_days >= H_DAYS:
             close_position(pid, float(last["close"]), float(last["sector"]), z, f"exit_H({_held_days}d)")
             log(f"  CLOSE {tk} {direction} id={pid} reason=H_DAYS ({_held_days}d) z={z:+.2f}")
-        elif abs(z) <= EXIT_Z:
+        elif _held_days >= 1 and abs(z) <= EXIT_Z:
             close_position(pid, float(last["close"]), float(last["sector"]), z, f"exit_z(|z|<={EXIT_Z})")
             log(f"  CLOSE {tk} {direction} id={pid} reason=EXIT_Z z={z:+.2f}")
     # Вход: divergence и нет открытой, и в окне
-    if divergence and not open_pos:
+    if divergence and not open_pos and abs(z) >= MIN_ENTRY_Z:
         _now = datetime.now()
         if not in_trading_window(_now):
             log_signal(ticker, ret_stock, ret_sector, z, None, "MISSED", "outside_window")
@@ -232,7 +233,7 @@ def main():
     init_db()
     st = load_state()
     save_state(st)
-    log(f"=== index_robot_v1 start | tickers={TICKERS} h={H_DAYS} exit_z={EXIT_Z} window={TRADE_START}-{TRADE_END} (Пн-Сб) ===")
+    log(f"=== index_robot_v1 start | tickers={TICKERS} h={H_DAYS} exit_z={EXIT_Z} min_entry_z={MIN_ENTRY_Z} window={TRADE_START}-{TRADE_END} (Пн-Сб) ===")
     sector = load_sector()
     if sector is None:
         log("Нет MOEXFN_D1 — выход"); return
