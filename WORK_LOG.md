@@ -3261,3 +3261,11 @@
 ### Git
 
 - (после commit)
+
+### Запуск index_v1 (30.10, 22:30) — после WF
+
+- `systemctl start finlab-index-robot-v1` → `active`, лог: `=== index_robot_v1 start | ... min_entry_z=1.0 ... ===`.
+- `RESUME` (файл `robots/robot_command_index_v1.txt`) → `CMD: RESUME`, `paused=false`, файл удалён после чтения (штатно).
+- **Проверка:** 22:30:22 SBER z=-0.18 / GAZP z=+0.30, **|z|<1.0 → вход не выполнен** (до фикса открыл бы шум id=4,5,6,7). **Фикс работает.**
+- State: `paused=false`, `open=0`, `total_pnl=-0.176`. **Наблюдение 1–2 недели** (live PnL/WR vs WF: SBER ~4.8, GAZP ~6.9).
+- **Техдолг (P3):** `.gitignore` для `robot_command*.txt`; лог `MISSED weak_z` в роботе; `finlab-robot` (DEAD) → masked.
