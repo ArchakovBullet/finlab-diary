@@ -15,7 +15,7 @@ from datetime import datetime
 
 ROOT = "/root/finlab"
 OUT_DIR = os.path.join(ROOT, "logs")
-PAIRS = [("BTCUSDT", "ETHUSDT"), ("BTCUSDT", "SOLUSDT")]
+PAIRS = [("BTCUSDT", "ETHUSDT"), ("BTCUSDT", "SOLUSDT"), ("ETHUSDT", "SOLUSDT")]
 WINDOW = 60
 ENTRY_Z_GRID = [2.5, 3.0]
 EXIT_Z = 0.5
