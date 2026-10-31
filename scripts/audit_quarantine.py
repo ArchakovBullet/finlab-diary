@@ -32,7 +32,9 @@ def load_pair(a, b, tf):
     da = da[[ca, "close"]].rename(columns={ca: "dt"})
     db = db[[cb, "close"]].rename(columns={cb: "dt"})
     m = pd.merge(da, db, on="dt", suffixes=("_a", "_b")).dropna()
-    return m.sort_values("dt").reset_index(drop=True)
+    m["dt"] = pd.to_datetime(m["dt"], errors="coerce")
+    m = m.dropna(subset=["dt"]).sort_values("dt").reset_index(drop=True)
+    return m
 
 def audit_pair(name, a, b, tf):
     m = load_pair(a, b, tf)
