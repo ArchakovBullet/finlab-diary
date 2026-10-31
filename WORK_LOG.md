@@ -3502,3 +3502,12 @@
 - **AI-отчёт** — `RVI` **не** `None` (проверка `--debug-content`).
 - **Algopack-блок** — **готов** (FutOI, HI2, MegaAlerts, TradeStats, RVI — price/time/delta). **Цель index_v1** — **достигнута.**
 - **Следующий** — **LK-HY** (coint_p 0.07 — на границе) — WF (если интерес) **или** **наблюдение.**
+
+---
+
+## 2026-11-01 (ночь-4) — RVI ключ в AI-отчётах (фикс)
+
+- **`ai_daily_report.py:236`:** `price_sber_gazp` → `price_at_rvi_date` (1 замена).
+- **`ai_weekly_report.py`:** `price_at_rvi` → `price_at_rvi_date` (4 замены).
+- **Проверка:** `ai_daily_report.py --no-email --debug-content` — `RVI: rvi=30.2 price_at_rvi_date=295.08` (SBER), `114.81` (GAZP). **Работает.**
+- **Algopack-блок** — **полностью готов** (FutOI, HI2, MegaAlerts, TradeStats, RVI — price/time/delta). **Цель index_v1** — **достигнута.**
