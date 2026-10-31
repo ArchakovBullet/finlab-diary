@@ -3,7 +3,7 @@
 bybit_walkforward.py — walk-forward тест пар BTC/ETH, BTC/SOL (H4).
 Read-only. v2/v3/v4 не трогает. Пишет CSV в logs/.
 
-Йохансен ранг=1 (или OLS-β на train), z-score (rolling window=60), entry_z 1.8/2.0, exit_z=0.5, time-stop 30 H4-свечей (5 дней).
+OLS-β на train, z-score (rolling window=60), entry_z 2.5/3.0, exit_z=0.5, time-stop 30 H4-свечей (5 дней).
 Walk-forward: train=180д, test=30д, шаг=30д (≈42 фолда на 10000 H4 ≈ 4.5 года).
 Fee: Bybit taker 0.055%*2 + slip 0.01%*2 = 0.13%.
 """
@@ -17,7 +17,7 @@ ROOT = "/root/finlab"
 OUT_DIR = os.path.join(ROOT, "logs")
 PAIRS = [("BTCUSDT", "ETHUSDT"), ("BTCUSDT", "SOLUSDT")]
 WINDOW = 60
-ENTRY_Z_GRID = [1.8, 2.0]
+ENTRY_Z_GRID = [2.5, 3.0]
 EXIT_Z = 0.5
 TIME_STOP_BARS = 30
 FEE = 0.0013
@@ -80,7 +80,7 @@ def stats(trades):
     peak = np.maximum.accumulate(cum)
     dd = cum - peak
     return {"n": len(t), "pnl": float(t.sum()), "wr": float((t > 0).mean()),
-            "sharpe": float(t.mean() / t.std() * np.sqrt(252)) if t.std() > 0 else 0.0,
+            "sharpe": float(t.mean() / t.std() * np.sqrt(252 * 6)) if t.std() > 0 else 0.0,
             "avg": float(t.mean()), "avg_hold": float(np.mean([tr["held"] for tr in trades])),
             "maxdd": float(dd.min()) if len(dd) else 0.0}
 
