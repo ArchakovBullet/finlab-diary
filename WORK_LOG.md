@@ -3493,3 +3493,12 @@
 - **`ai_daily_report.py --no-email --debug-content`:** `ALGOPACK-ФОН` в `user_content` (SBER/GAZP с price/time/delta). **AI видит связи.**
 - **`index_v1`** — лаборатория AI-фона (IDEAS п.29) — **цель достигнута.**
 - **Следующий:** LK-HY (coint_p 0.07 — на границе) — WF (если интерес).
+
+---
+
+## 2026-11-01 (ночь-3) — Algopack-блок: RVI.price_at_rvi_date работает (295.08/114.81)
+
+- **`get_index_algopack()`** — `price_at_rvi_date: 295.08` (SBER), `114.81` (GAZP). **Работает.**
+- **AI-отчёт** — `RVI` **не** `None` (проверка `--debug-content`).
+- **Algopack-блок** — **готов** (FutOI, HI2, MegaAlerts, TradeStats, RVI — price/time/delta). **Цель index_v1** — **достигнута.**
+- **Следующий** — **LK-HY** (coint_p 0.07 — на границе) — WF (если интерес) **или** **наблюдение.**
