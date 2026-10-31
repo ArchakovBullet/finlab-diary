@@ -32,6 +32,14 @@ def load_h4(ticker):
     df["begin"] = pd.to_datetime(df["begin"], errors="coerce")
     return df.dropna().sort_values("begin").reset_index(drop=True)
 
+def load_funding(symbol):
+    p = os.path.join(ROOT, "data", "bybit", f"funding_{symbol}.parquet")
+    if not os.path.exists(p): return None
+    df = pd.read_parquet(p)[["ts","fundingRate"]].copy()
+    df["ts"] = pd.to_datetime(df["ts"], errors="coerce")
+    return df.dropna().sort_values("ts").reset_index(drop=True)
+
+
 def merge_pair(a, b):
     da = load_h4(a)
     db = load_h4(b)
@@ -47,7 +55,7 @@ def ols_beta(train):
     res = sm.OLS(y, x).fit()
     return float(res.params[1])
 
-def simulate(test, beta, entry_z, exit_z, window=WINDOW):
+def simulate(test, beta, entry_z, exit_z, funding_df=None, window=WINDOW):
     if len(test) < window + 2: return []
     spread = test["la"] - beta * test["lb"]
     mu = spread.rolling(window).mean()
@@ -67,7 +75,16 @@ def simulate(test, beta, entry_z, exit_z, window=WINDOW):
         else:
             held = i - entry_i
             if held >= TIME_STOP_BARS or abs(z.iloc[i]) <= exit_z:
-                pnl = (spread.iloc[i] - entry_price) * pos - FEE
+                funding_sum = 0.0
+                if funding_df is not None:
+                    try:
+                        t0 = test.iloc[entry_i]["begin"]
+                        t1 = test.iloc[i]["begin"]
+                        f = funding_df[(funding_df["ts"] > t0) & (funding_df["ts"] <= t1)]
+                        funding_sum = float(f["fundingRate"].sum()) if len(f) else 0.0
+                    except Exception:
+                        funding_sum = 0.0
+                pnl = (spread.iloc[i] - entry_price) * pos - FEE - pos * funding_sum
                 trades.append({"pnl": pnl, "held": held, "entry_z": float(z.iloc[entry_i]), "exit_z": float(z.iloc[i])})
                 pos = 0
     return trades
@@ -84,7 +101,7 @@ def stats(trades):
             "avg": float(t.mean()), "avg_hold": float(np.mean([tr["held"] for tr in trades])),
             "maxdd": float(dd.min()) if len(dd) else 0.0}
 
-def walk_forward(a, b):
+def walk_forward(a, b, funding_df=None):
     m = merge_pair(a, b)
     if m is None or len(m) < 100: return []
     rows = []
@@ -102,7 +119,7 @@ def walk_forward(a, b):
             t0 += pd.Timedelta(days=STEP_D); continue
         beta = ols_beta(train)
         for ez in ENTRY_Z_GRID:
-            trs = simulate(test, beta, ez, EXIT_Z)
+            trs = simulate(test, beta, ez, EXIT_Z, funding_df=funding_df)
             s = stats(trs)
             rows.append({"pair": f"{a}/{b}", "fold": fold, "entry_z": ez, **s})
         t0 += pd.Timedelta(days=STEP_D)
@@ -113,7 +130,8 @@ def main():
     all_rows = []
     for a, b in PAIRS:
         print(f"=== {a}/{b} ===")
-        rows = walk_forward(a, b)
+        fund_b = load_funding(b)
+        rows = walk_forward(a, b, funding_df=fund_b)
         all_rows.extend(rows)
     if not all_rows:
         print("Нет данных."); return
