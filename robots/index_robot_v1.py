@@ -214,7 +214,9 @@ def check_ticker(ticker, df_stock, df_sector):
             close_position(pid, float(last["close"]), float(last["sector"]), z, f"exit_z(|z|<={EXIT_Z})")
             log(f"  CLOSE {tk} {direction} id={pid} reason=EXIT_Z z={z:+.2f}")
     # Вход: divergence и нет открытой, и в окне
-    if divergence and not open_pos and abs(z) >= MIN_ENTRY_Z:
+    if divergence and not open_pos and abs(z) < MIN_ENTRY_Z:
+        log_signal(ticker, ret_stock, ret_sector, z, None, "MISSED", "weak_z")
+    elif divergence and not open_pos and abs(z) >= MIN_ENTRY_Z:
         _now = datetime.now()
         if not in_trading_window(_now):
             log_signal(ticker, ret_stock, ret_sector, z, None, "MISSED", "outside_window")
