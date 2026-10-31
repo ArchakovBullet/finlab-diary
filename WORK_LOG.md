@@ -3485,3 +3485,11 @@
 - **`.gitignore`:** `robots/robot_command*.txt` (команды не коммитить). Commit `fee6be4`.
 - **`MISSED weak_z`:** `index_robot_v1.py` — при `|z| < MIN_ENTRY_Z` логировать `MISSED weak_z` (наблюдаемость). Проверка (23:47:18): SBER z=0.237, GAZP z=0.505 — `MISSED weak_z` в `signals`. Бэкап: `index_robot_v1.py.bak_20261101_0100`.
 - **`finlab-robot` (DEAD):** `enabled` + `inactive` (правило 9 — должен быть masked). Файл `/etc/systemd/system/finlab-robot.service` — удалён (бэкап: `backups/finlab-robot.service.bak_20261101`), `daemon-reload`, `mask`. **Проверка:** `masked`, `inactive`.
+
+---
+
+## 2026-11-01 (ночь-2) — AI-отчёт: algopack-блок работает (index_v1 — лаборатория AI-фона)
+
+- **`ai_daily_report.py --no-email --debug-content`:** `ALGOPACK-ФОН` в `user_content` (SBER/GAZP с price/time/delta). **AI видит связи.**
+- **`index_v1`** — лаборатория AI-фона (IDEAS п.29) — **цель достигнута.**
+- **Следующий:** LK-HY (coint_p 0.07 — на границе) — WF (если интерес).
