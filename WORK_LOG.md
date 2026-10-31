@@ -3477,3 +3477,11 @@
 - **M10/H4/H1** — 0 кандидатов (coint_p > 0.05). **LK-HY** — ближе всех (0.07–0.10), но **не < 0.05**.
 - **Карантин** — оправдан. **0 кандидатов.**
 - **D1** — игнорировать (мало данных, не торгуются).
+
+---
+
+## 2026-11-01 (ночь) — Техдолг: .gitignore, MISSED weak_z, finlab-robot masked
+
+- **`.gitignore`:** `robots/robot_command*.txt` (команды не коммитить). Commit `fee6be4`.
+- **`MISSED weak_z`:** `index_robot_v1.py` — при `|z| < MIN_ENTRY_Z` логировать `MISSED weak_z` (наблюдаемость). Проверка (23:47:18): SBER z=0.237, GAZP z=0.505 — `MISSED weak_z` в `signals`. Бэкап: `index_robot_v1.py.bak_20261101_0100`.
+- **`finlab-robot` (DEAD):** `enabled` + `inactive` (правило 9 — должен быть masked). Файл `/etc/systemd/system/finlab-robot.service` — удалён (бэкап: `backups/finlab-robot.service.bak_20261101`), `daemon-reload`, `mask`. **Проверка:** `masked`, `inactive`.
