@@ -3355,3 +3355,34 @@
 - **Все 3 пары (BTC/ETH, BTC/SOL, ETH/SOL), H4 — PnL < 0, WR < 0.5. Edge нет.** **Bybit H4 закрыт.**
 - **Причина:** пары коррелированы, спред маленький, fee 0.13% съедает. **H1/D1/Kalman — позже (если интерес).**
 - **CSV:** `logs/bybit_walkforward_2026-10-31_2102.csv`.
+
+---
+
+## 2026-10-31 (ночь-3) — HI2 401: keyring_pass.cfg битый (дубликаты, base64) — фикс
+
+### Симптом
+
+- **HI2 31.10** — 0 строк (`SBER_hi2 last: 30.10`). **`hi2_collect_cron.log`:** `401 Unauthorized` для **всех** тикеров (AFLT, SBER, GAZP, ...). **`keyring_pass.cfg`** — `DuplicateOptionError` (`token0`/`token3` уже есть), `ParsingError` (line 6 — base64 с `\n`).
+- **`hi2_collector.py`** — **`ModuleNotFoundError: No module named "MOEXPy"`** (без `PYTHONPATH`).
+
+### Фикс (правило 6 — Python, не sed)
+
+- **`keyring_pass.cfg`** — пересоздан через `keyring.set_password("MOEXPy", "token0", <MOEX_TOKEN из .env>)` (Python, base64 — **keyring** **сам**). Бэкап: `keyring_pass.cfg.broken2_20261101_0140`.
+- **`hi2_collector.py`** — запуск с `PYTHONPATH=/root/finlab/FinLabPy` (cron **ставит** — **вручную** **не** **было**).
+- **`hi2_daily_aggregator.py`** — `filter` → `pl.when` (Polars 1.40, `last()` после `filter` падал). Бэкап: `hi2_daily_aggregator.py.bak_20261101_0030`.
+
+### Проверка
+
+- **`keyring.get_password("MOEXPy","token0")`** — `eyJhbGciOi...` (читается).
+- **`hi2_collector.py`** — 226 тикеров, **13217** строк, **`SBER_hi2` 31.10 rows: 11**, `last: 2026-10-31`.
+- **`hi2_daily`** — обновлён (31.10).
+
+### Урок
+
+- **`keyring_pass.cfg`** — **только** `keyring.set_password` (Python). **Не** **sed**, **не** **руками** (base64, дубликаты).
+- **`hi2_collector.py`** — **всегда** с `PYTHONPATH=/root/finlab/FinLabPy` (cron **ставит**; **вручную** — **помнить**).
+- **`hi2_daily_aggregator.py`** — `pl.when` (Polars 1.40), **не** `filter`. **Continue** — прав (pivot — **чище**, **но** `pl.when` — **работает**).
+
+### Git
+
+- (после commit)

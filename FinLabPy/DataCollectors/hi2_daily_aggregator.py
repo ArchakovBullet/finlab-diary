@@ -51,7 +51,7 @@ def aggregate_all():
         # Группируем по дате
         # Все 11 метрик HI2
         agg_exprs = [
-            pl.col('value').filter(pl.col('metric') == m).last().alias(m)
+            pl.when(pl.col('metric') == m).then(pl.col('value')).last().alias(m)
             for m in METRICS
         ]
         if 'ticker' not in df.columns and 'secid' in df.columns:
