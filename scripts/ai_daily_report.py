@@ -233,7 +233,7 @@ def main():
                 else:
                     _lines.append(f"MegaAlerts: 0")
                 _lines.append(f"TradeStats ({_ts.get('tradedate')} {_ts.get('tradetime')}): price={_ts.get('price')} price_prev={_ts.get('price_prev')} delta_1d={_ts.get('delta_1d')} disb={_ts.get('disb')} vol={_ts.get('vol')}")
-                _lines.append(f"RVI ({_r.get('begin')}): rvi={_r.get('rvi')} price_at_rvi={_r.get('price_sber_gazp')}")
+                _lines.append(f"RVI ({_r.get('begin')}): rvi={_r.get('rvi')} price_at_rvi_date={_r.get('price_at_rvi_date')}")
             user_content = user_content + "\n".join(_lines)
     except Exception as _e:
         user_content = user_content + f"\n[algopack block error: {_e}]\n"
