@@ -3282,3 +3282,28 @@
 - **D1 freshness:** 133/296, oldest 121.5ч — **половина D1 устарела**. Причина: cron без D1-агрегатора? **Проверить (P1)**.
 - **Карантин:** 69 disabled в v2 (большинство — акция+акция, не торгуемы). Кандидаты на аудит: фьюч+фьюч (LK-HY, LK-RN, RN-TN, HY-IR, GAZPF-SBERF, BR-GAZPF, EURRUBF-USDRUBF). **Отдельная задача (P2, после Bybit WF).**
 - **Не действуем:** v1 (short_forbidden — правило), v2 (MAX_HOLD — уже done), v4 (exit_z=0.3 — наблюдение), index_v1 (MIN_ENTRY_Z=1.0 — WF подтвердил).
+
+---
+
+## 2026-10-31 (ночь) — Algopack-блок в AI-отчётах (daily+weekly): index_v1 — лаборатория AI-фона
+
+### Что сделано
+
+- **`get_index_algopack()`** в `ai_data_context.py` (v3, 149 строк): для SBER/GAZP — FutOI (SBERF/GAZPF), HI2 (pivot), MegaAlerts (items), TradeStats, RVI. **С ценой/временем/delta:**
+  - FutOI: `hour`, `h1_last_begin`, `price`, `price_prev`, `delta_1h` + ratios.
+  - HI2: `hhi_*`, `tradedate`, `tradetime`, `price_at_time`, `price_now`, `delta_1d`.
+  - MegaAlerts: `items` (tradedate[:10], tradetime, price, value, type).
+  - TradeStats: `price`, `price_prev`, `delta_1d`, `disb`, `vol`.
+  - RVI: `rvi`, `price_at_rvi_date`, `price_now`.
+- **`ai_daily_report.py`:** импорт (в настоящий, не в docstring) + блок `ALGOPACK-ФОН` после divergence. `--debug-content` для отладки.
+- **`ai_weekly_report.py`:** импорт + 2 блока (ctx — user_content, ans — answer).
+- **Проверка:** `py_compile OK`, dry-run — `ALGOPACK-ФОН` в выводе (SBER/GAZP с price/time/delta).
+
+### Цель index_v1 (IDEAS п.29)
+
+- **index_v1 — лаборатория AI-фона:** price + FutOI + HI2 + MegaAlerts + TradeStats + RVI → связи → гипотезы для walk-forward. **PnL — побочный.**
+- **AI видит:** пример SBER (HI2 30.10 18:40 buy=182/sell=143 при 296.91 → price_now 296.02 (delta −0.89) → TradeStats 31.10 disb=0.02 (было 0.88) — покупатели ушли). **Гипотезы — для WF, не внедрять.**
+
+### Git
+
+- (после commit)

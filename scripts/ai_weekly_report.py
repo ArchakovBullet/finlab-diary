@@ -5,7 +5,7 @@
 Отправляет в DeepSeek, сохраняет в logs/ai_weekly/, шлёт email.
 """
 import argparse
-from ai_data_context import get_index_divergence
+from ai_data_context import get_index_divergence, get_index_algopack
 import json
 import os
 import smtplib
@@ -177,6 +177,33 @@ def main():
             user_content = user_content + "\n".join(_lines)
     except Exception as _e:
         user_content = user_content + f"\n[divergence block error: {_e}]\n"
+
+    # === Algopack-фон SBER/GAZP (FutOI, HI2, MegaAlerts, TradeStats, RVI) — price+time+delta ===
+    try:
+        _apk = get_index_algopack()
+        if _apk:
+            _lines = ["\n\n=== ALGOPACK-ФОН SBER/GAZP (price + time + delta) ===",
+                      "Проанализируй СВЯЗИ: цена vs FutOI (физ/юр), цена vs HI2 (buy/sell/netflow), цена vs MegaAlerts (sell-аномалии), цена vs TradeStats (disb/vol), RVI. Ищи: divergence, extremes, развороты. Предложи гипотезы для walk-forward (не внедрять без WF)."]
+            for _t, _d in _apk.items():
+                _lines.append(f"\n--- {_t} ---")
+                _f = _d.get("futoi") or {}
+                _h = _d.get("hi2") or {}
+                _m = _d.get("mega") or {}
+                _ts = _d.get("tradestats") or {}
+                _r = _d.get("rvi") or {}
+                _lines.append(f"FutOI ({_f.get('hour')}, H1 last {_f.get('h1_last_begin')}): price={_f.get('price')} delta_1h={_f.get('delta_1h')} fiz_buy={_f.get('fiz_buy_ratio')} yur_buy={_f.get('yur_buy_ratio')}")
+                _lines.append(f"HI2 ({_h.get('tradedate')} {_h.get('tradetime')}): buy={_h.get('hhi_buy')} sell={_h.get('hhi_sell')} netflow_buy={_h.get('hhi_netflow_buy')} netflow_sell={_h.get('hhi_netflow_sell')} price_at_time={_h.get('price_at_time')} price_now={_h.get('price_now')} delta_1d={_h.get('delta_1d')}")
+                _mega_items = _m.get("items") or []
+                if _mega_items:
+                    _lines.append(f"MegaAlerts ({_m.get('count')}): " + "; ".join([f"{it.get('tradedate')} {it.get('tradetime')} price={it.get('price')} val={it.get('value')} type={it.get('type')}" for it in _mega_items]))
+                else:
+                    _lines.append(f"MegaAlerts: 0")
+                _lines.append(f"TradeStats ({_ts.get('tradedate')} {_ts.get('tradetime')}): price={_ts.get('price')} price_prev={_ts.get('price_prev')} delta_1d={_ts.get('delta_1d')} disb={_ts.get('disb')} vol={_ts.get('vol')}")
+                _lines.append(f"RVI ({_r.get('begin')}): rvi={_r.get('rvi')} price_at_rvi_date={_r.get('price_at_rvi_date')} price_now={_r.get('price_now')}")
+            user_content = user_content + "\n".join(_lines)
+    except Exception as _e:
+        user_content = user_content + f"\n[algopack block error: {_e}]\n"
+
     # === Контекст: enabled-пары + что уже сделано (чтобы AI не советовал сделанное) ===
     try:
         _cfg_v2 = json.load(open("/root/finlab/FinLabPy/My_Indicators/pairs_config_v2.json"))
@@ -270,6 +297,33 @@ def main():
             answer = answer + "\n".join(_lines)
     except Exception as _e:
         answer = answer + f"\n[divergence block error: {_e}]\n"
+
+
+    # === Algopack-фон SBER/GAZP (в answer) ===
+    try:
+        _apk = get_index_algopack()
+        if _apk:
+            _lines = ["\n\n=== ALGOPACK-ФОН SBER/GAZP (price + time + delta) ===",
+                      "Связи: цена vs FutOI/HI2/MegaAlerts/TradeStats/RVI. Гипотезы — для walk-forward (не внедрять без WF)."]
+            for _t, _d in _apk.items():
+                _lines.append(f"\n--- {_t} ---")
+                _f = _d.get("futoi") or {}
+                _h = _d.get("hi2") or {}
+                _m = _d.get("mega") or {}
+                _ts = _d.get("tradestats") or {}
+                _r = _d.get("rvi") or {}
+                _lines.append(f"FutOI ({_f.get('hour')}, H1 last {_f.get('h1_last_begin')}): price={_f.get('price')} delta_1h={_f.get('delta_1h')} fiz_buy={_f.get('fiz_buy_ratio')} yur_buy={_f.get('yur_buy_ratio')}")
+                _lines.append(f"HI2 ({_h.get('tradedate')} {_h.get('tradetime')}): buy={_h.get('hhi_buy')} sell={_h.get('hhi_sell')} netflow_buy={_h.get('hhi_netflow_buy')} netflow_sell={_h.get('hhi_netflow_sell')} price_at_time={_h.get('price_at_time')} price_now={_h.get('price_now')} delta_1d={_h.get('delta_1d')}")
+                _mega_items = _m.get("items") or []
+                if _mega_items:
+                    _lines.append(f"MegaAlerts ({_m.get('count')}): " + "; ".join([f"{it.get('tradedate')} {it.get('tradetime')} price={it.get('price')} val={it.get('value')} type={it.get('type')}" for it in _mega_items]))
+                else:
+                    _lines.append(f"MegaAlerts: 0")
+                _lines.append(f"TradeStats ({_ts.get('tradedate')} {_ts.get('tradetime')}): price={_ts.get('price')} price_prev={_ts.get('price_prev')} delta_1d={_ts.get('delta_1d')} disb={_ts.get('disb')} vol={_ts.get('vol')}")
+                _lines.append(f"RVI ({_r.get('begin')}): rvi={_r.get('rvi')} price_at_rvi_date={_r.get('price_at_rvi_date')} price_now={_r.get('price_now')}")
+            answer = answer + "\n".join(_lines)
+    except Exception as _e:
+        answer = answer + f"\n[algopack block error: {_e}]\n"
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     iso = datetime.now().isocalendar()

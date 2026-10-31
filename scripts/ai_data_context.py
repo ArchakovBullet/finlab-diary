@@ -23,7 +23,7 @@ CANDLES = ROOT / 'data' / 'candles'
 CONFIG = ROOT / 'FinLabPy' / 'My_Indicators' / 'pairs_config.json'
 QUARANTINE_STATE = ROOT / 'logs' / 'pairs_quarantine_state.json'
 
-DEAD_TICKERS = {"IN","PIKK","BY","RF","UT","GU","CS","VGSB","KZ"}  # мёртвые тикеры (не торгуются, freshness-шум)
+DEAD_TICKERS = {"IN","PIKK","BY","RF","UT","I2"}  # мёртвые тикеры (не торгуются, freshness-шум)
 
 
 def get_freshness():
@@ -109,6 +109,156 @@ def get_index_divergence():
         out[t] = {'ret_stock': round(ret_stock,6), 'ret_sector': round(ret_sector,6),
                   'divergence': divergence, 'z': (round(z,3) if z is not None else None),
                   'signal': signal, 'date': str(last['begin'].date())}
+    return out
+
+
+def get_index_algopack():
+    """Algopack-фон для SBER/GAZP с ценой/временем/delta (FutOI, HI2, MegaAlerts, TradeStats, RVI)."""
+    import pandas as _pd
+    out = {}
+    for t in ("SBER", "GAZP"):
+        fut_t = t + "F"
+        item = {}
+        h1 = None
+        m10 = None
+        try:
+            p = ROOT / "data" / "candles" / (t + "_H1.parquet")
+            if p.exists():
+                h1 = _pd.read_parquet(p)[["begin","close"]].copy()
+                h1["begin"] = _pd.to_datetime(h1["begin"], errors="coerce")
+                h1 = h1.dropna().sort_values("begin").reset_index(drop=True)
+        except Exception:
+            h1 = None
+        try:
+            p = ROOT / "data" / "candles" / (t + "_M10.parquet")
+            if p.exists():
+                m10 = _pd.read_parquet(p)[["begin","close"]].copy()
+                m10["begin"] = _pd.to_datetime(m10["begin"], errors="coerce")
+                m10 = m10.dropna().sort_values("begin").reset_index(drop=True)
+        except Exception:
+            m10 = None
+        def _price_at(df, ts):
+            if df is None or len(df) == 0: return None
+            try:
+                ts = _pd.to_datetime(ts)
+                d = df[df["begin"] <= ts]
+                if len(d): return float(d["close"].iloc[-1])
+            except Exception:
+                pass
+            return None
+        # --- FutOI (SBERF/GAZPF) ---
+        try:
+            p = ROOT / "data" / "futoi_1h" / "futoi_1h.parquet"
+            if p.exists():
+                d = _pd.read_parquet(p)
+                d = d[d["ticker"] == fut_t].reset_index(drop=True)
+                if len(d):
+                    last = d.iloc[-1]
+                    hour_ts = last.get("hour")
+                    h1_last_begin = h1["begin"].iloc[-1] if h1 is not None and len(h1) else None
+                    h1_last_close = float(h1["close"].iloc[-1]) if h1 is not None and len(h1) else None
+                    h1_prev_close = float(h1["close"].iloc[-2]) if h1 is not None and len(h1) > 1 else None
+                    delta_1h = (h1_last_close - h1_prev_close) if (h1_last_close is not None and h1_prev_close is not None) else None
+                    item["futoi"] = {
+                        "hour": str(hour_ts),
+                        "h1_last_begin": str(h1_last_begin) if h1_last_begin is not None else None,
+                        "price": h1_last_close,
+                        "price_prev": h1_prev_close,
+                        "delta_1h": (round(delta_1h, 4) if delta_1h is not None else None),
+                        "fiz_buy_ratio": float(last.get("fiz_buy_ratio", 0)),
+                        "yur_buy_ratio": float(last.get("yur_buy_ratio", 0)),
+                        "fiz_ratio_delta": float(last.get("fiz_ratio_delta", 0)),
+                        "yur_ratio_delta": float(last.get("yur_ratio_delta", 0)),
+                    }
+        except Exception:
+            pass
+        # --- HI2 (SBER/GAZP) ---
+        try:
+            p = ROOT / "data" / "hi2" / (t + "_hi2.parquet")
+            if p.exists():
+                d = _pd.read_parquet(p)
+                last_day = d["tradedate"].max()
+                d = d[d["tradedate"] == last_day]
+                if len(d):
+                    piv = d.pivot_table(index="tradetime", columns="metric", values="value", aggfunc="last")
+                    last = piv.iloc[-1]
+                    tt = str(piv.index[-1])
+                    ts_at = _pd.to_datetime(str(last_day) + " " + tt) if last_day is not None else None
+                    price_at = _price_at(m10, ts_at) if ts_at is not None else None
+                    price_now = float(m10["close"].iloc[-1]) if m10 is not None and len(m10) else None
+                    delta_1d = (price_now - price_at) if (price_now is not None and price_at is not None) else None
+                    keys = ["hhi_buy","hhi_sell","hhi_netflow_buy","hhi_netflow_sell","hhi_agressive","hhi_volume"]
+                    item["hi2"] = {k: (float(last[k]) if k in last.index and _pd.notna(last[k]) else None) for k in keys}
+                    item["hi2"]["tradedate"] = str(last_day)[:10]
+                    item["hi2"]["tradetime"] = tt
+                    item["hi2"]["price_at_time"] = price_at
+                    item["hi2"]["price_now"] = price_now
+                    item["hi2"]["delta_1d"] = (round(delta_1d, 4) if delta_1d is not None else None)
+        except Exception:
+            pass
+        # --- MegaAlerts (SBER/GAZP) ---
+        try:
+            p = ROOT / "data" / "mega_alerts" / (t + "_alerts.parquet")
+            if p.exists():
+                d = _pd.read_parquet(p)
+                d["tradedate"] = _pd.to_datetime(d["tradedate"], errors="coerce")
+                cutoff = d["tradedate"].max() - _pd.Timedelta(days=2)
+                d2 = d[d["tradedate"] >= cutoff].copy()
+                items = []
+                for _, r in d2.iterrows():
+                    ts = _pd.to_datetime(str(r.get("tradedate")) + " " + str(r.get("tradetime", "00:00:00")))
+                    items.append({
+                        "tradedate": str(r.get("tradedate", ""))[:10],
+                        "tradetime": str(r.get("tradetime", "")),
+                        "price": _price_at(m10, ts),
+                        "value": float(r.get("value", 0)) if _pd.notna(r.get("value", None)) else None,
+                        "type": str(r.get("alert_type", "")),
+                    })
+                item["mega"] = {"count": int(len(items)), "items": items}
+        except Exception:
+            pass
+        # --- TradeStats (SBER/GAZP) ---
+        try:
+            p = ROOT / "data" / "tradestats" / (t + "_tradestats.parquet")
+            if p.exists():
+                d = _pd.read_parquet(p)
+                last = d.iloc[-1]
+                prev_ts = _pd.to_datetime(str(last.get("tradedate")) + " " + str(last.get("tradetime"))) - _pd.Timedelta(days=1)
+                d_prev = d[(_pd.to_datetime(d["tradedate"].astype(str) + " " + d["tradetime"].astype(str))) <= prev_ts]
+                price_prev = float(d_prev.iloc[-1]["pr_vwap"]) if len(d_prev) else None
+                price_now = float(last.get("pr_vwap", 0))
+                delta_1d = (price_now - price_prev) if (price_prev is not None) else None
+                item["tradestats"] = {
+                    "tradedate": str(last.get("tradedate", ""))[:10],
+                    "tradetime": str(last.get("tradetime", "")),
+                    "price": price_now,
+                    "price_prev": price_prev,
+                    "delta_1d": (round(delta_1d, 4) if delta_1d is not None else None),
+                    "pr_change": float(last.get("pr_change", 0)),
+                    "disb": float(last.get("disb", 0)),
+                    "vol": float(last.get("vol", 0)),
+                }
+        except Exception:
+            pass
+        # --- RVI (общий, с ценой SBER/GAZP на D1 и сейчас) ---
+        try:
+            p = ROOT / "data" / "sector_indices" / "RVI_D1.parquet"
+            if p.exists():
+                d = _pd.read_parquet(p)
+                d["begin"] = _pd.to_datetime(d["begin"], errors="coerce")
+                d = d.dropna(subset=["begin"]).sort_values("begin").reset_index(drop=True)
+                last = d.iloc[-1]
+                price_at_rvi = _price_at(h1, last["begin"])
+                price_now = float(h1["close"].iloc[-1]) if h1 is not None and len(h1) else None
+                item["rvi"] = {
+                    "begin": str(last["begin"])[:10],
+                    "rvi": float(last.get("close", 0)),
+                    "price_at_rvi_date": price_at_rvi,
+                    "price_now": price_now,
+                }
+        except Exception:
+            pass
+        out[t] = item
     return out
 
 

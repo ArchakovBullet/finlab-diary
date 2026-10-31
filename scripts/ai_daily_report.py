@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """ai_daily_report.py — ежедневный отчёт через VseGPT + email.
-from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4, get_index_divergence
+from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signals_summary_v4, get_index_divergence, get_index_algopack
 
 
 Читает robot.log за 24ч, robot_state.json, pairs_robot.db.
@@ -8,7 +8,7 @@ from ai_data_context import get_robot_state_v4, get_trades_history_v4, get_signa
 """
 import argparse
 import json
-from ai_data_context import get_index_divergence
+from ai_data_context import get_index_divergence, get_index_algopack
 import os
 import smtplib
 import sqlite3
@@ -145,6 +145,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model', default=DEFAULT_MODEL)
     ap.add_argument('--hours', type=int, default=24)
+    ap.add_argument('--debug-content', action='store_true', help='print user_content (debug)')
     ap.add_argument('--no-email', action='store_true')
     args = ap.parse_args()
 
@@ -210,6 +211,34 @@ def main():
             user_content = user_content + "\n".join(_lines)
     except Exception as _e:
         user_content = user_content + f"\n[divergence block error: {_e}]\n"
+
+    # === Algopack-фон SBER/GAZP (FutOI, HI2, MegaAlerts, TradeStats, RVI) — price+time+delta ===
+    try:
+        _apk = get_index_algopack()
+        if _apk:
+            _lines = ["\n\n=== ALGOPACK-ФОН SBER/GAZP (price + time + delta) ===",
+                      "Проанализируй СВЯЗИ: цена vs FutOI (физ/юр), цена vs HI2 (buy/sell/netflow), цена vs MegaAlerts (sell-аномалии), цена vs TradeStats (disb/vol), RVI. Ищи: divergence, extremes, развороты. Предложи гипотезы для walk-forward (не внедрять без WF)."]
+            for _t, _d in _apk.items():
+                _lines.append(f"\n--- {_t} ---")
+                _f = _d.get("futoi") or {}
+                _h = _d.get("hi2") or {}
+                _m = _d.get("mega") or {}
+                _ts = _d.get("tradestats") or {}
+                _r = _d.get("rvi") or {}
+                _lines.append(f"FutOI ({_f.get('hour')}): price={_f.get('price')} delta_1h={_f.get('delta_1h')} fiz_buy={_f.get('fiz_buy_ratio')} yur_buy={_f.get('yur_buy_ratio')}")
+                _lines.append(f"HI2 ({_h.get('tradedate')} {_h.get('tradetime')}): buy={_h.get('hhi_buy')} sell={_h.get('hhi_sell')} netflow_buy={_h.get('hhi_netflow_buy')} netflow_sell={_h.get('hhi_netflow_sell')} price_at_time={_h.get('price_at_time')} price_now={_h.get('price_now')} delta_1d={_h.get('delta_1d')}")
+                _mega_items = _m.get("items") or []
+                if _mega_items:
+                    _lines.append(f"MegaAlerts ({_m.get('count')}): " + "; ".join([f"{it.get('tradedate')} {it.get('tradetime')} price={it.get('price')} val={it.get('value')} type={it.get('type')}" for it in _mega_items]))
+                else:
+                    _lines.append(f"MegaAlerts: 0")
+                _lines.append(f"TradeStats ({_ts.get('tradedate')} {_ts.get('tradetime')}): price={_ts.get('price')} price_prev={_ts.get('price_prev')} delta_1d={_ts.get('delta_1d')} disb={_ts.get('disb')} vol={_ts.get('vol')}")
+                _lines.append(f"RVI ({_r.get('begin')}): rvi={_r.get('rvi')} price_at_rvi={_r.get('price_sber_gazp')}")
+            user_content = user_content + "\n".join(_lines)
+    except Exception as _e:
+        user_content = user_content + f"\n[algopack block error: {_e}]\n"
+
+
     # === Контекст: enabled-пары + что уже сделано (чтобы AI не советовал сделанное) ===
     try:
         _cfg_v2 = json.load(open("/root/finlab/FinLabPy/My_Indicators/pairs_config_v2.json"))
@@ -305,6 +334,8 @@ def main():
         report_time=report_time,
         hours=args.hours,
     )
+    if "--debug-content" in sys.argv:
+        print(user_content)
     r = call_vsegpt(args.model, system_prompt_fmt, user_content, api_key)
     if r.status_code != 200:
         print(f'ERROR: HTTP {r.status_code}')
