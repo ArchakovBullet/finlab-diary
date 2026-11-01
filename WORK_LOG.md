@@ -3511,3 +3511,29 @@
 - **`ai_weekly_report.py`:** `price_at_rvi` → `price_at_rvi_date` (4 замены).
 - **Проверка:** `ai_daily_report.py --no-email --debug-content` — `RVI: rvi=30.2 price_at_rvi_date=295.08` (SBER), `114.81` (GAZP). **Работает.**
 - **Algopack-блок** — **полностью готов** (FutOI, HI2, MegaAlerts, TradeStats, RVI — price/time/delta). **Цель index_v1** — **достигнута.**
+
+---
+
+## 2026-11-01 (ночь-5) — H4 mean-reversion (GD-SV, PD-SV, PT-SV, GD-PT): не работает
+
+### Скрипт
+
+- `scripts/h4_exit_z_wf.py` (read-only, `py_compile OK`): H4-пары (GD-SV, PD-SV, PT-SV, GD-PT), entry_z=2.0, exit_z 0.5/0.3, wait_z0 (убран), fee 0.28%/0.14%, WF train=30/test=7/шаг=7. look-ahead исправлен (open i+1), PnL через цены.
+- CSV: `logs/h4_exit_z_wf_2026-11-01_2112.csv`.
+
+### Результаты (mean по фолдам)
+
+| Пара | exit_z | fee | n | PnL | PF | WR | maxDD |
+|---|---|---|---|---|---|---|---|
+| GD/PT | 0.5 | 0.14 | 87 | +0.01% | 1.28 | 0.41 | −0.24 |
+| GD/SV | 0.5 | 0.14 | 96 | +0.23% | 1.05 | 0.47 | −0.15 |
+| PD/SV | 0.5 | 0.14 | 60 | −0.24% | 0.13 | 0.40 | −0.31 |
+| PT/SV | 0.5 | 0.14 | 73 | +0.25% | 3.40 | 0.39 | −0.35 |
+
+### Вывод
+
+- **H4 mean-reversion** — **не работает стабильно** (PF ~1, WR 40%, maxDD −15…−40%). **PD-SV** — убыток (PF 0.13). **PT-SV** — PF 3.40, но WR 39%, maxDD −35% (рискованно).
+- **fee 0.28%** (taker) — все убыточны (кроме PT-SV +0.03%, PF 2.07). **fee 0.14%** (maker) — на грани (GD-SV 1.05, GD-PT 1.28, PT-SV 3.40).
+- **wait_z0** — не влияет (убран). **Sharpe** — None (n<10 на фолд).
+- **v2** — не трогаем (правило 13). **v2** (+29.68₽) — на реальных данных, но WF — убыток (везение / малая выборка).
+- **Следующий** — **крипта funding (Bybit)**, **PT-SV** (доп. WF).
