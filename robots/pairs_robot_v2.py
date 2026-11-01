@@ -1047,7 +1047,13 @@ def main():
                     pairs_config = json.load(_f_cfg)
             except Exception as _e_cfg:
                 print(f'  ⚠️ Не удалось перечитать pairs_config: {_e_cfg}')
+            # Early return: не проверять вне окна 7-23 МСК (экономия циклов)
+            import datetime as _dt_main
+            _now_msk = _dt_main.datetime.now(_dt_main.timezone(_dt_main.timedelta(hours=3)))
+            _in_window = (7 <= _now_msk.hour < 23)
             for tf, interval in CHECK_INTERVALS.items():
+                if not _in_window:
+                    continue
                 if current_time - last_check[tf] >= interval:
                     check_signals_by_tf(pairs_config, tf)
                     last_check[tf] = current_time
