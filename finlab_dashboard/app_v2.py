@@ -4209,19 +4209,18 @@ elif page == "📊 Торговые роботы":
         robot_tab = "📊 Обзор"
 
     with tab_moex:
-        robot_tab = st.selectbox(
+        moex_robot = st.selectbox(
             "Выберите робота (MOEX)",
             ["📊 Парная торговля", "📊 Парная торговля_v2", "📊 Парная торговля_v3", "📊 Парная торговля_v4 (test)", "📈 Робот акций (TradeStats)", "📊 Робот фьючерсов", "📊 Робот фьючерсов (v2)", "📈 Робот индексный_v1 (test)"]
         )
 
     with tab_btc:
-        btc_tab = st.selectbox("Выберите робота (BTC)", ["📊 Funding Paper (BTC)", "📊 Funding Sim (BTC)"])
+        btc_robot = st.selectbox("Выберите робота (BTC)", ["📊 Funding Paper (BTC)", "📊 Funding Sim (BTC)"])
         st.info("BTC-роботы — в разработке (funding_paper, funding_sim)")
     import sqlite3 as _sqlite3
     from datetime import datetime as _dt_now
 
     with tab_obzor:
-        if robot_tab == "📊 Обзор":
             # Загружаем данные по роботам
             _robots_stats = {}
     
@@ -4496,7 +4495,7 @@ elif page == "📊 Торговые роботы":
     
     
     with tab_moex:
-        if robot_tab == "📊 Парная торговля":
+        if moex_robot == "📊 Парная торговля":
             st.subheader("📊 Робот парной торговли")
             with st.expander("🔍 Что и как анализирует v1 (раскрыть)", expanded=False):
                 st.markdown("""
@@ -4877,7 +4876,7 @@ elif page == "📊 Торговые роботы":
                 else:
                     st.info("Сделок пока нет")
     
-        elif robot_tab == "📊 Парная торговля_v2":
+        elif moex_robot == "📊 Парная торговля_v2":
             st.subheader("📊 Парная торговля v2 (эксперимент)")
             with st.expander("🔍 Что и как анализирует v2 (раскрыть)", expanded=False):
                 st.markdown("""
@@ -5092,7 +5091,7 @@ elif page == "📊 Торговые роботы":
     
                 _conn_v2.close()
     
-        elif robot_tab == "📊 Парная торговля_v3":
+        elif moex_robot == "📊 Парная торговля_v3":
             st.subheader("📊 Парная торговля v3 (эксперимент)")
             with st.expander("🔍 Что и как анализирует v3 (раскрыть)", expanded=False):
                 st.markdown("""
@@ -5308,7 +5307,7 @@ elif page == "📊 Торговые роботы":
     
                 _conn_v2.close()
     
-        elif robot_tab == "📊 Парная торговля_v4 (test)":
+        elif moex_robot == "📊 Парная торговля_v4 (test)":
             st.subheader("📊 Парная торговля v4 (test) — ПЕСОЧНИЦА")
             st.caption("🧪 v4 — песочница. Тестирует combined_v1 (Соколов 2.1.34) для BANE-BN. Остальные — baseline.")
     
@@ -5415,7 +5414,7 @@ elif page == "📊 Торговые роботы":
             st.divider()
     
     
-        elif robot_tab == "📈 Робот акций":  # DEAD CODE (таб убран 02.10.2026, заменён на TradeStats)
+        elif moex_robot == "📈 Робот акций":  # DEAD CODE (таб убран 02.10.2026, заменён на TradeStats)
             st.subheader("📈 Робот акций")
             st.info("Бумажный режим — виртуальные сделки без реального исполнения")
     
@@ -5809,7 +5808,7 @@ elif page == "📊 Торговые роботы":
             else:
                 st.info("БД робота фьючерсов не найдена")
     
-        elif robot_tab == "📊 Робот фьючерсов":
+        elif moex_robot == "📊 Робот фьючерсов":
             st.subheader("📊 Робот фьючерсов")
             st.info("Сигналы TradeStats + FutOI | Бумажный режим | Горизонт 5 дней")
     
@@ -6004,7 +6003,7 @@ elif page == "📊 Торговые роботы":
             else:
                 st.info("Закрытых сделок пока нет")
     
-        elif robot_tab == "📊 Робот фьючерсов (v2)":
+        elif moex_robot == "📊 Робот фьючерсов (v2)":
             st.subheader("📊 Робот фьючерсов (v2)")
             st.info("TradeStats only | RVI>=30 | SCORE_MIN=4 | HOLD_DAYS=3 | Бумажный режим")
     
@@ -6179,7 +6178,7 @@ elif page == "📊 Торговые роботы":
             else:
                 st.info("Закрытых сделок пока нет (v2)")
     
-        elif robot_tab == "📈 Робот индексный_v1 (test)":
+        elif moex_robot == "📈 Робот индексный_v1 (test)":
             st.subheader("📈 Робот индексный_v1 (test)")
             with st.expander("🔍 Что и как работает (раскрыть)", expanded=False):
                 st.markdown("""
@@ -6290,7 +6289,7 @@ elif page == "📊 Торговые роботы":
             else:
                 st.info("БД index_robot_v1.db не найдена")
     
-        elif robot_tab == "📈 Робот акций (TradeStats)":
+        elif moex_robot == "📈 Робот акций (TradeStats)":
             st.subheader("📈 Робот акций (TradeStats)")
             st.info("5 сигналов TradeStats | SCORE_MIN=4 | HOLD_DAYS=5 | RVI>=30 | Только LONG")
     
