@@ -961,7 +961,27 @@ def main():
             # Неторговый день — новые позиции не открываем
             if not is_moex_trading_day():
                 print('⏸️ Неторговый день — новые позиции не открываются')
-                time.sleep(3600)
+                # Читаем команды даже в неторговый день (PAUSE/RESUME/STOP)
+                for _ in range(60):  # 60 × 60 = 3600 сек (1 час)
+                    time.sleep(60)
+                    _cmd = process_command()
+                    if _cmd == 'PAUSE':
+                        state = load_state()
+                        state['paused'] = True
+                        save_state(state)
+                        print('⏸️ PAUSE (неторговый день)')
+                    elif _cmd == 'RESUME':
+                        state = load_state()
+                        state['paused'] = False
+                        save_state(state)
+                        print('▶️ RESUME (неторговый день)')
+                    elif _cmd == 'STOP':
+                        state = load_state()
+                        state['running'] = False
+                        save_state(state)
+                        running = False
+                        print('🛑 STOP (неторговый день)')
+                        break
                 continue
 
             # Загружаем состояние (безопасный default: paused=True)
